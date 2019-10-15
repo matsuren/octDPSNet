@@ -6,6 +6,13 @@ You can try octDPSNet in Google Colab [here (octDPSNet_demo_colab.ipynb)](https:
 
 After running all cells, point cloud `results.ply` will be downloaded. You can visualize it by some tools e.g. [Meshlab](http://www.meshlab.net/).
 
+Examples of the point cloud are displayed here.
+
+<span style="display:block;text-align:center">
+<img src="./sample_data/mvs_test_00023/out.gif" width="300px">
+<img src="./sample_data/sun3d_test_00047/out.gif" width="300px">
+</span>
+
 ## Requirements
 
 ## Acknowledge
