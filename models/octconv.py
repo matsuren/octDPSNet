@@ -187,10 +187,11 @@ class OctConv3d(nn.Module):
 class disparityregression(nn.Module):
     def __init__(self, maxdisp, min_val=0):
         super(disparityregression, self).__init__()
-        self.disp = torch.Tensor(np.reshape(np.array(range(min_val, maxdisp + min_val)), [1, maxdisp, 1, 1])).cuda()
-        self.disp.requires_grad_(False)
+        self.disp = torch.Tensor(np.reshape(np.array(range(min_val, maxdisp + min_val)), [1, maxdisp, 1, 1]))
 
     def forward(self, x):
+        self.disp = self.disp.to(x.device)
+        self.disp.requires_grad_(False)
         disp = self.disp.repeat(x.size()[0], 1, x.size()[2], x.size()[3])
         out = torch.sum(x * disp, 1)
         return out

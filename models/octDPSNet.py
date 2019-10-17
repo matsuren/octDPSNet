@@ -82,6 +82,7 @@ class octDPSNet(nn.Module):
         super(octDPSNet, self).__init__()
         print('octDPSNet')
         print('octconv alpha:', octconv.ALPHA)
+        self.device = None
         self.nlabel = nlabel
         self.mindepth = mindepth
 
@@ -146,6 +147,9 @@ class octDPSNet(nn.Module):
                     m.bias.data.zero_()
 
     def forward(self, ref, targets, pose, intrinsics, intrinsics_inv):
+        if self.device is None:
+            self.device = ref.device
+
         intrinsics4 = intrinsics.clone()
         intrinsics_inv4 = intrinsics_inv.clone()
         intrinsics4[:,:2,:] = intrinsics4[:,:2,:] / 4
@@ -158,11 +162,11 @@ class octDPSNet(nn.Module):
 
         refimg_fea_H, refimg_fea_L = self.feature_extraction(ref)
 
-        disp2depth = torch.ones(refimg_fea_H.size(0), refimg_fea_H.size(2), refimg_fea_H.size(3)).cuda() * self.mindepth * self.nlabel
-        disp2depth_L = torch.ones(refimg_fea_L.size(0), refimg_fea_L.size(2), refimg_fea_L.size(3)).cuda() * self.mindepth * self.nlabel
+        disp2depth = torch.ones(refimg_fea_H.size(0), refimg_fea_H.size(2), refimg_fea_H.size(3)).to(self.device) * self.mindepth * self.nlabel
+        disp2depth_L = torch.ones(refimg_fea_L.size(0), refimg_fea_L.size(2), refimg_fea_L.size(3)).to(self.device) * self.mindepth * self.nlabel
 
         for j, target in enumerate(targets):
-            cost = torch.FloatTensor(refimg_fea_H.size()[0], refimg_fea_H.size()[1]*2, self.nlabel,  refimg_fea_H.size()[2],  refimg_fea_H.size()[3]).zero_().cuda()
+            cost = torch.FloatTensor(refimg_fea_H.size()[0], refimg_fea_H.size()[1]*2, self.nlabel,  refimg_fea_H.size()[2],  refimg_fea_H.size()[3]).zero_().to(self.device)
             targetimg_fea_H, targetimg_fea_L  = self.feature_extraction(target)
 
             for i in range(1, self.nlabel+1):
@@ -171,7 +175,7 @@ class octDPSNet(nn.Module):
                 cost[:, :refimg_fea_H.size()[1], i-1, :,:] = refimg_fea_H
                 cost[:, refimg_fea_H.size()[1]:, i-1, :,:] = targetimg_fea_t
 
-            cost_L = torch.FloatTensor(refimg_fea_L.size()[0], refimg_fea_L.size()[1]*2, self.nlabel//2,  refimg_fea_L.size()[2],  refimg_fea_L.size()[3]).zero_().cuda()
+            cost_L = torch.FloatTensor(refimg_fea_L.size()[0], refimg_fea_L.size()[1]*2, self.nlabel//2,  refimg_fea_L.size()[2],  refimg_fea_L.size()[3]).zero_().to(self.device)
             for i in range(self.nlabel // 2):
                 float_index = 1 + 0.5 + 2 * i
                 #     print(float_index)
@@ -191,7 +195,7 @@ class octDPSNet(nn.Module):
 
         # depth refinement
         costss_L = torch.FloatTensor(refimg_fea_L.size()[0], 1, self.nlabel//2, refimg_fea_L.size()[2],
-                                     refimg_fea_L.size()[3]).zero_().cuda()
+                                     refimg_fea_L.size()[3]).zero_().to(self.device)
         for i in range(self.nlabel//2):
             costt_L = costs_L[:, :, i, :, :]
             costss_L[:, :, i, :, :] = self.convs_L(torch.cat([refimg_fea_L, costt_L],1)) + costt_L
@@ -199,7 +203,7 @@ class octDPSNet(nn.Module):
         # TODO
         # combine low-res high-res volume
         costss_H = torch.FloatTensor(refimg_fea_H.size()[0], 1, self.nlabel, refimg_fea_H.size()[2],
-                                     refimg_fea_H.size()[3]).zero_().cuda()
+                                     refimg_fea_H.size()[3]).zero_().to(self.device)
         refimg_fea = self.convs_H_first((refimg_fea_H, refimg_fea_L))
 
         # Squeeze and Excitation

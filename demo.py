@@ -26,6 +26,16 @@ import cv2
 # In[ ]:
 
 
+gpu_id = 0
+device = torch.device("cuda:{}".format(gpu_id) if torch.cuda.is_available() else "cpu")
+# device = torch.device('cpu')
+torch.backends.cudnn.benchmark = True
+print('device:', device)
+
+
+# In[ ]:
+
+
 ############################
 # select data
 ############################
@@ -40,7 +50,9 @@ test_folder = './sample_data/mvs_test_00023/'
 nlabel = 64
 mindepth = 0.5
 octconv.ALPHA = 0.75
-mymodel = octdpsnet(nlabel, mindepth, octconv.ALPHA, True).cuda()
+# octconv.ALPHA = 0.9375
+
+mymodel = octdpsnet(nlabel, mindepth, octconv.ALPHA, True).to(device)
 mymodel.eval()
 print('Load:')
 
@@ -114,8 +126,16 @@ ax[1].imshow(img)
 
 
 # preprocess image
-resize_x = 640
-resize_y = 480
+if device.type == 'cpu':
+    div_factor = 2
+    resize_x = 640//div_factor
+    resize_y = 480//div_factor
+else:
+    resize_x = 640
+    resize_y = 480
+    
+print('resize:{}, {}'.format(resize_x,resize_y))
+
 h, w, c = tgt_img.shape
 x_scale = resize_x/w
 y_scale = resize_y/h
@@ -145,11 +165,11 @@ ref_poses
 
 
 with torch.no_grad():
-    tgt_img = tgt_img.cuda()
-    imgs = [it.cuda() for it in imgs]
-    ref_poses = [it.cuda() for it in ref_poses]
-    intrinsics = intrinsics[np.newaxis].cuda()
-    inv_intrinsic = inv_intrinsic[np.newaxis].cuda()
+    tgt_img = tgt_img.to(device)
+    imgs = [it.to(device) for it in imgs]
+    ref_poses = [it.to(device) for it in ref_poses]
+    intrinsics = intrinsics[np.newaxis].to(device)
+    inv_intrinsic = inv_intrinsic[np.newaxis].to(device)
     ref_poses = torch.cat(ref_poses,1)
     output_depth = mymodel(tgt_img, imgs, ref_poses, intrinsics, inv_intrinsic)    
     depth = output_depth.squeeze().cpu().numpy()
@@ -182,8 +202,6 @@ def pcdCamera(scale=1.0, color=[1, 0, 0]):
 
 
 img = org_img
-resize_x = 640
-resize_y = 480
 img = cv2.resize(img, (resize_x, resize_y))
 
 height, width, _ = img.shape
