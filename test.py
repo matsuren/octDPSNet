@@ -48,8 +48,49 @@ parser.add_argument('--maxdepth', type=float ,default=10, help='maximum depth')
 parser.add_argument('--alpha', type=float, default=0.9375, help='ratio of low frequency')  # 0.9375, 0.875, 0.75, 0.5, 0.25
 # parser.add_argument('--reduction', type=int, default=8, help='reduction rate for oct SE')  # 8, 16
 
+def generateDataset_test(FOLDER):
+    # Generate dataset_test.txt
+    with open(FOLDER + '/test.txt') as f:
+        data = f.readlines()
+
+    id_range = []
+    dataset_names = []
+    dataset_name = None
+    start = -1
+    for i, it in enumerate(data):
+        if dataset_name == it[:it.find('_')]:
+            continue
+        else:
+            if start < 0:
+                dataset_name = it[:it.find('_')]
+                start = i
+            else:
+                dataset_names.append(dataset_name)
+                id_range.append([start, i])
+                start = i
+                dataset_name = it[:it.find('_')]
+    dataset_names.append(dataset_name)
+    id_range.append([start, i])
+
+    print('Gerenate dataset_test.txt from test.txt')
+    print('Datasets:', dataset_names)
+    print('id_range:', id_range)
+
+    # Save data
+    for i in range(len(dataset_names)):
+        filename = FOLDER + '/{}_test.txt'.format(dataset_names[i])
+        it = id_range[i]
+        with open(filename, mode='w') as f:
+            f.writelines(data[it[0]:it[1]])
+
+
 def main():
     args = parser.parse_args()
+
+    ttypes = ['mvs_test.txt', 'sun3d_test.txt', 'rgbd_test.txt', 'scenes11_test.txt']
+    # generate ttypes from test.txt
+    if not os.path.exists(os.path.join(args.data, ttypes[0])):
+        generateDataset_test(args.data)
 
     #################################
     # Hyper parameter
@@ -91,7 +132,7 @@ def main():
         os.mkdir(output_dir)
     print(output_dir)
 
-    ttypes = ['mvs_test.txt', 'sun3d_test.txt', 'rgbd_test.txt', 'scenes11_test.txt']
+
 
     # save all error to analyze later
     save_depth_error = []

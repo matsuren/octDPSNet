@@ -30,9 +30,9 @@ pip install pipenv
 ```bash
 git clone https://github.com/matsuren/octDPSNet.git
 cd octDPSNet
-pipenv install
+pipenv install --dev
 ```
-### Verify install
+### Verify your installation
 Run the following command to make sure that you've installed octDPSNet correctly.
 ```bash
 pipenv shell
@@ -43,19 +43,37 @@ After running the command, you will see point cloud in Open3D visualization wind
 ## Prepare dataset
 ### Download DeMoN dataset
 We use [DeMoN datasets](https://lmb.informatik.uni-freiburg.de/people/ummenhof/depthmotionnet/) for training and testing.  
-Please follow the instruction [here (sunghoonim/DPSNet)](https://github.com/sunghoonim/DPSNet#data-praparation) to prepare the datasets.
 
-For the preparation of ETH3D dataset, please see [here](#Download-dataset).
+Please follow the instruction [here (sunghoonim/DPSNet)](https://github.com/sunghoonim/DPSNet#data-praparation) to prepare the datasets or run the following command.
+
+```bash
+cd $DATASETROOT
+mkdir demon && cd demon
+git clone --depth 1 https://github.com/matsuren/octDPSNet.git tmp_dir_
+bash ./tmp_dir_/preparation/download_testdata.sh
+python ./tmp_dir_/preparation/preparedata_test.py
+
+# Download train dataset. Please wait for a while. 
+# It takes up huge disk space (around 300GB)
+bash ./tmp_dir_/preparation/download_traindata.sh
+# Remove bugfix
+cd traindata
+mv rgbd_bugfix_10_to_20_3d_train.h5 rgbd_10_to_20_3d_train.h5
+mv rgbd_bugfix_10_to_20_handheld_train.h5 rgbd_10_to_20_handheld_train.h5
+mv rgbd_bugfix_20_to_inf_3d_train.h5 rgbd_20_to_inf_3d_train.h5
+mv rgbd_bugfix_20_to_inf_handheld_train.h5 rgbd_20_to_inf_handheld_train.h5
+cd ..
+python ./tmp_dir_/preparation/preparedata_train.py
+```
+
+For the preparation of ETH3D dataset, please see [ETH3D dataset](#ETH3D-dataset).
 
 
 ## Train
-
-
 ### Training
-
 ```bash
 python train.py
-$DATASETROOT/home/komatsu/datasets/demon/train/ --log-output --alpha 0.75
+$DATASETROOT/demon/train/ --log-output --alpha 0.75
 ```
 
 **Note:** If you want to try other alpha value (`--alpha`), please check [How to choose α](#How-to-choose-α).
@@ -67,7 +85,7 @@ Set smaller number for `--nlabel` (Default is 64), `--batch-size` (Default is 16
 E.g.,
 ```bash
 python train.py
-$DATASETROOT/home/komatsu/datasets/demon/train/ --log-output --nlabel 16 --batch-size 8
+$DATASETROOT/demon/train/ --log-output --nlabel 16 --batch-size 8
 ```
 ## Test
 ### DeMoN dataset
@@ -93,10 +111,6 @@ rm ETH3D_results.zip DPSNetTmp -rf
 ```
 
 #### Test on ETH3D dataset
-
-In order to run command
-
-
 ```bash
 cd $octDPSNet
 python test_ETH3D.py $DATASETROOT/ETH3D_results --sequence-length 2 --alpha 0.75
@@ -113,13 +127,13 @@ OctDPSNet has a hyper-parameter α (`--alpha`) that controls the ratio of low sp
 
 We recommend you to choose α (`--alpha`) value from the following:
 
-- 0.25 &nbsp;&nbsp; ($C_h=24$ and $C_l=8$)
-- 0.5 &nbsp; &nbsp;&nbsp; ($C_h=16$ and $C_l=16$)
-- 0.75  &nbsp; &nbsp;($C_h=8$ and $C_l=24$)
-- 0.875  &nbsp;($C_h=4$ and $C_l=28$)
-- 0.9375 ($C_h=2$ and $C_l=30$)
+- 0.25 &nbsp;&nbsp; (C_h=24 and C_l=8)
+- 0.5 &nbsp; &nbsp;&nbsp; (C_h=16 and C_l=16)
+- 0.75  &nbsp; &nbsp;(C_h=8 and C_l=24)
+- 0.875  &nbsp;(C_h=4 and C_l=28)
+- 0.9375 (C_h=2 and C_l=30)
 
-Here, $C_h$ and $C_l$ are the channel numbers of the high and low spatial frequency features, respectively
+Here, C_h and C_l are the channel numbers of the high and low spatial frequency features, respectively
 
 ## Acknowledge
 This repository is based on [sunghoonim/DPSNet](https://github.com/sunghoonim/DPSNet). Thanks a lot.
