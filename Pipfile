@@ -9,8 +9,6 @@ h5py = "*"
 lz4 = "*"
 
 [packages]
-torch = "==1.0.1"
-torchvision = "==0.2.2"
 blessings = "*"
 path-py = "*"
 joblib = "*"

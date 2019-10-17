@@ -17,6 +17,7 @@ Examples of the point cloud are displayed here.
 
 ## Requirements
 python >= 3.5  
+CUDA 
 pipenv
 
 ## Install
@@ -32,10 +33,25 @@ git clone https://github.com/matsuren/octDPSNet.git
 cd octDPSNet
 pipenv install --dev
 ```
+
+Since PyTorch is not included in Pipfile, you need to install PyTorch in virtual environment via pip.
+The official instruction is available [here(latest)](https://pytorch.org/get-started/locally/) or
+ [here(previous-versions)](https://pytorch.org/get-started/previous-versions/#via-pip)
+Please install PyTorch according to your CUDA version and python version. 
+
+If you're using CUDA 10.0 and Python 3.5, run the following commands to install PyTorch 1.3.0.
+
+```bash
+# Enter the virtual environment 
+pipenv shell
+# Install PyTorch via pip
+pip install https://download.pytorch.org/whl/cu100/torch-1.3.0%2Bcu100-cp35-cp35m-linux_x86_64.whl
+```
+
 ### Verify your installation
 Run the following command to make sure that you've installed octDPSNet correctly.
 ```bash
-pipenv shell
+# Make sure you're in the virtual environment
 python demo.py
 ```
 After running the command, you will see point cloud in Open3D visualization window and `results.ply` will be generated in the current directory.
