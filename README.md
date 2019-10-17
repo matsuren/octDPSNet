@@ -17,8 +17,8 @@ Examples of the point cloud are displayed here.
 
 ## Requirements
 python >= 3.5  
-CUDA 
-pipenv
+CUDA   
+pipenv  
 
 ## Install
 We recommend you to use `pipenv` to install the correct version of the python libraries since some libraries (e.g. scipy) changed their API which causes some errors. We might modify our source code later to get it working on the latest version of the libraries.
@@ -34,9 +34,9 @@ cd octDPSNet
 pipenv install --dev
 ```
 
-Since PyTorch is not included in Pipfile, you need to install PyTorch in virtual environment via pip.
-The official instruction is available [here(latest)](https://pytorch.org/get-started/locally/) or
- [here(previous-versions)](https://pytorch.org/get-started/previous-versions/#via-pip)
+Since PyTorch is not included in Pipfile, you need to install PyTorch in the virtual environment via pip.
+The official instruction is available [here (latest)](https://pytorch.org/get-started/locally/) or
+ [here (previous-versions)](https://pytorch.org/get-started/previous-versions/#via-pip). 
 Please install PyTorch according to your CUDA version and python version. 
 
 If you're using CUDA 10.0 and Python 3.5, run the following commands to install PyTorch 1.3.0.
@@ -149,8 +149,8 @@ We recommend you to choose α (`--alpha`) value from the following:
 - 0.875  &nbsp;(C_h=4 and C_l=28)
 - 0.9375 (C_h=2 and C_l=30)
 
-Here, C_h and C_l are the channel numbers of the high and low spatial frequency features, respectively
+Here, C_h and C_l are the channel numbers of the high and low spatial frequency features, respectively.
 
-## Acknowledge
-This repository is based on [sunghoonim/DPSNet](https://github.com/sunghoonim/DPSNet). Thanks a lot.
+## Acknowledgement
+This repository is based on [sunghoonim/DPSNet](https://github.com/sunghoonim/DPSNet). 
 
