@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser(description='Test octDPSNet',
 
 parser.add_argument('data', metavar='DIR',
                     help='path to dataset')
-parser.add_argument('--sequence-length', type=int, metavar='N', help='sequence length for training', default=2)
+parser.add_argument('--sequence-length', type=int, metavar='N', help='sequence length for testing', default=2)
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers')
 parser.add_argument('-b', '--batch-size', default=1, type=int,

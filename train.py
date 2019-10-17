@@ -52,7 +52,7 @@ parser.add_argument('--log-summary', default='progress_log_summary.csv', metavar
                     help='csv where to save per-epoch train and valid stats')
 parser.add_argument('--log-full', default='progress_log_full.csv', metavar='PATH',
                     help='csv where to save per-gradient descent train stats')
-parser.add_argument('--log-output', action='store_true', help='will log dispnet outputs and warped imgs at validation step')
+parser.add_argument('--log-output', action='store_true', help='show depth for tensorboard')
 parser.add_argument('--ttype', default='train.txt', type=str, help='Text file indicates input data')
 parser.add_argument('--ttype2', default='val.txt', type=str, help='Text file indicates input data')
 parser.add_argument('-f', '--training-output-freq', type=int, help='frequence for outputting dispnet outputs and warped imgs at training for all scales if 0 will not output',
