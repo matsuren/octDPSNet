@@ -1,0 +1,24 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+torch = "==1.0.1"
+torchvision = "==0.2.2"
+blessings = "*"
+path-py = "*"
+joblib = "*"
+progressbar2 = "*"
+tensorboardx = "*"
+opencv-python = "*"
+scipy = "==1.1.0"
+imageio = "*"
+matplotlib = "*"
+imgaug = "*"
+open3d = "*"
+
+[requires]
+python_version = "3"
