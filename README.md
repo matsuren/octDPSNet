@@ -1,7 +1,18 @@
 # OctDPSNet
-Pytorch implementation of [Octave Deep Plane-sweeping Network: Reducing Spatial Redundancy for Learning-based Plane-sweeping Stereo](./). 
+Pytorch implementation of [Octave Deep Plane-sweeping Network: Reducing Spatial Redundancy for Learning-based Plane-sweeping Stereo](http://dx.doi.org/10.1109/ACCESS.2019.2947195) (Early Access). 
 
-The more detailed information is coming soon.
+```
+  @article{KomatsuAccess2019,
+    author={R. Komatsu, H. Fujii, Y. Tamura, A. Yamashita, and H. Asama},
+    journal={IEEE Access},
+    title={Octave Deep Plane-sweeping Network: Reducing Spatial Redundancy for Learning-based Plane-sweeping Stereo},
+    year={2019},
+    volume={},
+    number={},
+    pages={},
+    doi={10.1109/ACCESS.2019.2947195},
+  }
+```
 
 ## Demo
 You can try octDPSNet in Google Colab [here (octDPSNet_demo_colab.ipynb)](https://colab.research.google.com/github/matsuren/octDPSNet/blob/master/octDPSNet_demo_colab.ipynb).
