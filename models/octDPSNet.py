@@ -255,12 +255,20 @@ class octDPSNet(nn.Module):
 
 
 def octdpsnet(nlabel, mindepth, alpha, pretrained=False):
-    a_to_url = {
-        0.25: 'octdps_a25n64-a6d5f6e8.pth',
-        0.50: 'octdps_a50n64-e6b0d50e.pth',
-        0.75: 'octdps_a75n64-2c47a5f9.pth',
-        0.875: 'octdps_a875n64-de7a76ad.pth',
-        0.9375: 'octdps_a9375n64-398ec6ee.pth'}
+    a_to_url = {}
+    if nlabel == 64:
+        a_to_url = {
+            0.25: 'octdps_a25n64-a6d5f6e8.pth',
+            0.50: 'octdps_a50n64-e6b0d50e.pth',
+            0.75: 'octdps_a75n64-2c47a5f9.pth',
+            0.875: 'octdps_a875n64-de7a76ad.pth',
+            0.9375: 'octdps_a9375n64-398ec6ee.pth',
+        }
+    elif nlabel == 32:
+        a_to_url = {
+            0.75: 'octdps_a75n32-911a7225.pth',
+        }
+
     model = octDPSNet(nlabel, mindepth)
     if pretrained:
         if alpha in a_to_url:
@@ -268,4 +276,6 @@ def octdpsnet(nlabel, mindepth, alpha, pretrained=False):
             print(a_to_url[alpha])
             weights = model_zoo.load_url(url, map_location='cpu')
             model.load_state_dict(weights['state_dict'])
+        else:
+            print("No pretrained file was found")
     return model

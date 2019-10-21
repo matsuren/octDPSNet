@@ -47,10 +47,15 @@ test_folder = './sample_data/mvs_test_00023/'
 # In[ ]:
 
 
-nlabel = 64
+if device.type == 'cpu':
+    nlabel = 32
+    octconv.ALPHA = 0.75
+else:
+    nlabel = 64
+    octconv.ALPHA = 0.75
+#     octconv.ALPHA = 0.9375
+
 mindepth = 0.5
-octconv.ALPHA = 0.75
-# octconv.ALPHA = 0.9375
 
 mymodel = octdpsnet(nlabel, mindepth, octconv.ALPHA, True).to(device)
 mymodel.eval()
