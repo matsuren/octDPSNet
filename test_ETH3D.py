@@ -32,13 +32,15 @@ parser.add_argument('--pretrained', dest='pretrained', default=None, metavar='PA
                     help='path to pre-trained model')
 parser.add_argument('--seed', default=0, type=int, help='seed for random functions, and network initialization')
 parser.add_argument('--output-dir', default='resultETH', type=str, help='Output directory')
-parser.add_argument('--nlabel', type=int ,default=64, help='number of label')
-parser.add_argument('--mindepth', type=float ,default=0.5, help='minimum depth')
-parser.add_argument('--maxdepth', type=float ,default=72, help='maximum depth')
+parser.add_argument('--nlabel', type=int, default=64, help='number of label')
+parser.add_argument('--mindepth', type=float, default=0.5, help='minimum depth')
+parser.add_argument('--maxdepth', type=float, default=72, help='maximum depth')
 parser.add_argument('--output-print', action='store_true', help='print output depth')
-parser.add_argument('--alpha', type=float, default=0.9375, help='ratio of low frequency')  # 0.9375, 0.875, 0.75, 0.5, 0.25
+parser.add_argument('--alpha', type=float, default=0.9375,
+                    help='ratio of low frequency')  # 0.9375, 0.875, 0.75, 0.5, 0.25
 
 cudnn.benchmark = True
+
 
 def main():
     args = parser.parse_args()
@@ -94,31 +96,32 @@ def main():
             scale = scale_.numpy()[0]
 
             # compute output
-            pose = torch.cat(ref_poses_var,1)
+            pose = torch.cat(ref_poses_var, 1)
             start = time.time()
             output_depth = octdps(tgt_img_var, ref_imgs_var, pose, intrinsics_var, intrinsics_inv_var)
             elps = time.time() - start
             mask = (tgt_depth <= args.maxdepth) & (tgt_depth >= args.mindepth) & (tgt_depth == tgt_depth)
 
-            tgt_disp = args.mindepth*args.nlabel/tgt_depth
-            output_disp = args.mindepth*args.nlabel/output_depth
+            tgt_disp = args.mindepth * args.nlabel / tgt_depth
+            output_disp = args.mindepth * args.nlabel / output_depth
 
-            output_disp_ = torch.squeeze(output_disp.data.cpu(),1)
-            output_depth_ = torch.squeeze(output_depth.data.cpu(),1)
+            output_disp_ = torch.squeeze(output_disp.data.cpu(), 1)
+            output_depth_ = torch.squeeze(output_depth.data.cpu(), 1)
 
-            errors[0,:,i] = compute_errors_test(tgt_depth[mask]/scale, output_depth_[mask]/scale)
-            errors[1,:,i] = compute_errors_test(tgt_disp[mask]/scale, output_disp_[mask]/scale)
+            errors[0, :, i] = compute_errors_test(tgt_depth[mask] / scale, output_depth_[mask] / scale)
+            errors[1, :, i] = compute_errors_test(tgt_disp[mask] / scale, output_disp_[mask] / scale)
 
-            print('Elapsed Time {} Abs Error {:.4f}'.format(elps, errors[0,0,i]))
+            print('Elapsed Time {} Abs Error {:.4f}'.format(elps, errors[0, 0, i]))
 
             if args.output_print:
                 output_disp_n = (output_disp_).numpy()[0]
-                np.save(output_dir/'{:04d}{}'.format(i,'.npy'), output_disp_n)
-                disp = (255*tensor2array(torch.from_numpy(output_disp_n), max_value=args.nlabel, colormap='bone')).astype(np.uint8)
-                imsave(output_dir/'{:04d}_disp{}'.format(i,'.png'), disp.transpose(1, 2, 0))
+                np.save(output_dir / '{:04d}{}'.format(i, '.npy'), output_disp_n)
+                disp = (255 * tensor2array(torch.from_numpy(output_disp_n), max_value=args.nlabel,
+                                           colormap='bone')).astype(np.uint8)
+                imsave(output_dir / '{:04d}_disp{}'.format(i, '.png'), disp.transpose(1, 2, 0))
 
     mean_errors = errors.mean(2)
-    error_names = ['abs_rel','abs_diff','sq_rel','rms','log_rms','a1','a2','a3']
+    error_names = ['abs_rel', 'abs_diff', 'sq_rel', 'rms', 'log_rms', 'a1', 'a2', 'a3']
     print("{}".format(args.output_dir))
     print("Depth Results : ")
     print("{:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}".format(*error_names))
@@ -138,7 +141,7 @@ def main():
             print(it)
             print(it, file=f)
 
-    np.savetxt(output_dir/'errors.csv', mean_errors, fmt='%1.4f', delimiter=',')
+    np.savetxt(output_dir / 'errors.csv', mean_errors, fmt='%1.4f', delimiter=',')
 
 
 if __name__ == '__main__':

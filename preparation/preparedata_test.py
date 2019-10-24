@@ -1,13 +1,12 @@
 # https://github.com/sunghoonim/DPSNet/blob/master/dataset/preparation/preparedata_test.py
 # modify path
 import os
-import sys
 
-from joblib import Parallel, delayed
-import numpy as np
 import imageio
+import numpy as np
+from joblib import Parallel, delayed
+
 imageio.plugins.freeimage.download()
-from imageio.plugins import freeimage
 import h5py
 from lz4.block import decompress
 import scipy.misc
@@ -16,10 +15,11 @@ from path import Path
 
 path = './'
 
+
 def dump_example(dataset_name):
     print("Converting {:}.h5 ...".format(dataset_name))
     file = h5py.File(os.path.join(path, "testdata", "{:}.h5".format(dataset_name)), "r")
-    
+
     for (seq_idx, seq_name) in enumerate(file):
         if dataset_name == 'scenes11_test':
             scale = 0.4
@@ -41,27 +41,31 @@ def dump_example(dataset_name):
                 if dt_type == "camera":
                     if f_idx == 0:
                         intrinsics = np.array([[img[0], 0, img[3]], [0, img[1], img[4]], [0, 0, 1]])
-                    pose = np.array([[img[5],img[8],img[11],img[14]*scale], [img[6],img[9],img[12],img[15]*scale], [img[7],img[10],img[13],img[16]*scale]])
+                    pose = np.array(
+                        [[img[5], img[8], img[11], img[14] * scale], [img[6], img[9], img[12], img[15] * scale],
+                         [img[7], img[10], img[13], img[16] * scale]])
                     poses.append(pose.tolist())
                 elif dt_type == "depth":
                     dimension = dataset.attrs["extents"]
-                    depth = np.array(np.frombuffer(decompress(img.tobytes(), dimension[0] * dimension[1] * 2), dtype = np.float16)).astype(np.float32)
-                    depth = depth.reshape(dimension[0], dimension[1])*scale
+                    depth = np.array(np.frombuffer(decompress(img.tobytes(), dimension[0] * dimension[1] * 2),
+                                                   dtype=np.float16)).astype(np.float32)
+                    depth = depth.reshape(dimension[0], dimension[1]) * scale
 
-                    dump_depth_file = dump_dir/'{:04d}.npy'.format(f_idx)
+                    dump_depth_file = dump_dir / '{:04d}.npy'.format(f_idx)
                     np.save(dump_depth_file, depth)
                 elif dt_type == "image":
                     img = imageio.imread(img.tobytes())
-                    dump_img_file = dump_dir/'{:04d}.jpg'.format(f_idx)
+                    dump_img_file = dump_dir / '{:04d}.jpg'.format(f_idx)
                     scipy.misc.imsave(dump_img_file, img)
 
-        dump_cam_file = dump_dir/'cam.txt'
+        dump_cam_file = dump_dir / 'cam.txt'
         np.savetxt(dump_cam_file, intrinsics)
-        poses_file = dump_dir/'poses.txt'
+        poses_file = dump_dir / 'poses.txt'
         np.savetxt(poses_file, np.array(poses).reshape(-1, 12), fmt='%.6e')
 
         if len(dump_dir.files('*.jpg')) < 2:
             dump_dir.rmtree()
+
 
 def preparedata():
     num_threads = 1
@@ -86,6 +90,7 @@ def preparedata():
             tf.write('{}\n'.format(subdir))
 
     print("Finished Converting Data.")
+
 
 if __name__ == "__main__":
     preparedata()

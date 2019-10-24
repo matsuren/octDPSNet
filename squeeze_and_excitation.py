@@ -94,7 +94,7 @@ class SpatialSELayer(nn.Module):
         # print(input_tensor.size(), squeeze_tensor.size())
         squeeze_tensor = squeeze_tensor.view(batch_size, 1, a, b)
         output_tensor = torch.mul(input_tensor, squeeze_tensor)
-        #output_tensor = torch.mul(input_tensor, squeeze_tensor)
+        # output_tensor = torch.mul(input_tensor, squeeze_tensor)
         return output_tensor
 
 

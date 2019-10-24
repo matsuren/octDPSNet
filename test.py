@@ -21,11 +21,14 @@ from path import Path
 from imageio import imwrite
 
 import json
+
+
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
 
 parser = argparse.ArgumentParser(description='Test octDPSNet',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -42,10 +45,13 @@ parser.add_argument('--pretrained', dest='pretrained', default=None, metavar='PA
 parser.add_argument('--seed', default=0, type=int, help='seed for random functions, and network initialization')
 parser.add_argument('--output-dir', default='results', type=str, help='Output directory')
 # parser.add_argument('--ttype', default='test.txt', type=str, help='Text file indicates input data')
-parser.add_argument('--nlabel', type=int ,default=64, help='number of label')
-parser.add_argument('--mindepth', type=float ,default=0.5, help='minimum depth')
-parser.add_argument('--maxdepth', type=float ,default=10, help='maximum depth')
-parser.add_argument('--alpha', type=float, default=0.9375, help='ratio of low frequency')  # 0.9375, 0.875, 0.75, 0.5, 0.25
+parser.add_argument('--nlabel', type=int, default=64, help='number of label')
+parser.add_argument('--mindepth', type=float, default=0.5, help='minimum depth')
+parser.add_argument('--maxdepth', type=float, default=10, help='maximum depth')
+parser.add_argument('--alpha', type=float, default=0.9375,
+                    help='ratio of low frequency')  # 0.9375, 0.875, 0.75, 0.5, 0.25
+
+
 # parser.add_argument('--reduction', type=int, default=8, help='reduction rate for oct SE')  # 8, 16
 
 def generateDataset_test(FOLDER):
@@ -131,8 +137,6 @@ def main():
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
     print(output_dir)
-
-
 
     # save all error to analyze later
     save_depth_error = []
@@ -278,6 +282,7 @@ def main():
     #     # Save the full figure...
     #     fname = str(output_dir / 'big_error_pair{}.png'.format(tmp))
     #     fig.savefig(fname)
+
 
 if __name__ == '__main__':
     # main

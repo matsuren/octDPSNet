@@ -19,19 +19,21 @@ from models.oct_semodule import SpatialSELayerOct
 def addHL(x1, x2):
     x1_H, x1_L = x1
     x2_H, x2_L = x2
-    return x1_H+x2_H, x1_L+x2_L
+    return x1_H + x2_H, x1_L + x2_L
 
 
 def oct_convtext(in_planes, out_planes, kernel_size=3, stride=1, dilation=1, type='normal'):
     if type == 'last':
         return nn.Sequential(
-            OctConv(in_planes, out_planes, kernel_size=kernel_size, stride=stride, dilation=dilation, padding=((kernel_size - 1) * dilation) // 2, type=type),
-            nn.LeakyReLU(0.1,inplace=True)
+            OctConv(in_planes, out_planes, kernel_size=kernel_size, stride=stride, dilation=dilation,
+                    padding=((kernel_size - 1) * dilation) // 2, type=type),
+            nn.LeakyReLU(0.1, inplace=True)
         )
     else:
         return nn.Sequential(
-            OctConv(in_planes, out_planes, kernel_size=kernel_size, stride=stride, dilation=dilation, padding=((kernel_size - 1) * dilation) // 2, type=type),
-            _LeakyReLU(0.1,inplace=True)
+            OctConv(in_planes, out_planes, kernel_size=kernel_size, stride=stride, dilation=dilation,
+                    padding=((kernel_size - 1) * dilation) // 2, type=type),
+            _LeakyReLU(0.1, inplace=True)
         )
 
 
@@ -86,7 +88,7 @@ class octDPSNet(nn.Module):
         self.nlabel = nlabel
         self.mindepth = mindepth
 
-#         self.feature_extraction = feature_extraction()
+        #         self.feature_extraction = feature_extraction()
         self.feature_extraction = oct_feature_extraction(last_type='normal')
         self.cost_regularization = costRegularization()
 
@@ -95,9 +97,9 @@ class octDPSNet(nn.Module):
         self.upsample = partial(F.interpolate, scale_factor=2, mode="trilinear", align_corners=False)
         # TODO Leakyrelu? Numver of parameter?
         self.convs_L = nn.Sequential(
-            OctConv(1+int(32*octconv.ALPHA), 32, kernel_size=3, stride=1, dilation=1,padding=1, type='first'),
+            OctConv(1 + int(32 * octconv.ALPHA), 32, kernel_size=3, stride=1, dilation=1, padding=1, type='first'),
             _ReLU(inplace=True),
-            OctConv(32, 32, kernel_size=3, stride=1, dilation=2,padding=2),
+            OctConv(32, 32, kernel_size=3, stride=1, dilation=2, padding=2),
             _ReLU(inplace=True),
             OctConv(32, 32, kernel_size=3, stride=1, dilation=4, padding=4),
             _ReLU(inplace=True),
@@ -109,7 +111,7 @@ class octDPSNet(nn.Module):
 
         self.convs_H_first = OctConv(32, 32, kernel_size=3, stride=1, padding=1, type='last')
         self.convs_H = nn.Sequential(
-            OctConv(1+32, 32, kernel_size=3, stride=1, padding=1, type='first'),
+            OctConv(1 + 32, 32, kernel_size=3, stride=1, padding=1, type='first'),
             _ReLU(inplace=True),
             OctConv(32, 32, kernel_size=3, stride=1, dilation=2, padding=2),
             _ReLU(inplace=True),
@@ -128,7 +130,7 @@ class octDPSNet(nn.Module):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
             elif isinstance(m, nn.Conv3d):
-                n = m.kernel_size[0] * m.kernel_size[1]*m.kernel_size[2] * m.out_channels
+                n = m.kernel_size[0] * m.kernel_size[1] * m.kernel_size[2] * m.out_channels
                 m.weight.data.normal_(0, math.sqrt(2. / n))
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
@@ -152,37 +154,41 @@ class octDPSNet(nn.Module):
 
         intrinsics4 = intrinsics.clone()
         intrinsics_inv4 = intrinsics_inv.clone()
-        intrinsics4[:,:2,:] = intrinsics4[:,:2,:] / 4
-        intrinsics_inv4[:,:2,:2] = intrinsics_inv4[:,:2,:2] * 4
+        intrinsics4[:, :2, :] = intrinsics4[:, :2, :] / 4
+        intrinsics_inv4[:, :2, :2] = intrinsics_inv4[:, :2, :2] * 4
 
         intrinsics8 = intrinsics.clone()
         intrinsics_inv8 = intrinsics_inv.clone()
-        intrinsics8[:,:2,:] = intrinsics8[:,:2,:] / 8
-        intrinsics_inv8[:,:2,:2] = intrinsics_inv8[:,:2,:2] * 8
+        intrinsics8[:, :2, :] = intrinsics8[:, :2, :] / 8
+        intrinsics_inv8[:, :2, :2] = intrinsics_inv8[:, :2, :2] * 8
 
         refimg_fea_H, refimg_fea_L = self.feature_extraction(ref)
 
-        disp2depth = torch.ones(refimg_fea_H.size(0), refimg_fea_H.size(2), refimg_fea_H.size(3)).to(self.device) * self.mindepth * self.nlabel
-        disp2depth_L = torch.ones(refimg_fea_L.size(0), refimg_fea_L.size(2), refimg_fea_L.size(3)).to(self.device) * self.mindepth * self.nlabel
+        disp2depth = torch.ones(refimg_fea_H.size(0), refimg_fea_H.size(2), refimg_fea_H.size(3)).to(
+            self.device) * self.mindepth * self.nlabel
+        disp2depth_L = torch.ones(refimg_fea_L.size(0), refimg_fea_L.size(2), refimg_fea_L.size(3)).to(
+            self.device) * self.mindepth * self.nlabel
 
         for j, target in enumerate(targets):
-            cost = torch.FloatTensor(refimg_fea_H.size()[0], refimg_fea_H.size()[1]*2, self.nlabel,  refimg_fea_H.size()[2],  refimg_fea_H.size()[3]).zero_().to(self.device)
-            targetimg_fea_H, targetimg_fea_L  = self.feature_extraction(target)
+            cost = torch.FloatTensor(refimg_fea_H.size()[0], refimg_fea_H.size()[1] * 2, self.nlabel,
+                                     refimg_fea_H.size()[2], refimg_fea_H.size()[3]).zero_().to(self.device)
+            targetimg_fea_H, targetimg_fea_L = self.feature_extraction(target)
 
-            for i in range(1, self.nlabel+1):
+            for i in range(1, self.nlabel + 1):
                 depth = torch.div(disp2depth, i)
-                targetimg_fea_t = inverse_warp(targetimg_fea_H, depth, pose[:,j], intrinsics4, intrinsics_inv4)
-                cost[:, :refimg_fea_H.size()[1], i-1, :,:] = refimg_fea_H
-                cost[:, refimg_fea_H.size()[1]:, i-1, :,:] = targetimg_fea_t
+                targetimg_fea_t = inverse_warp(targetimg_fea_H, depth, pose[:, j], intrinsics4, intrinsics_inv4)
+                cost[:, :refimg_fea_H.size()[1], i - 1, :, :] = refimg_fea_H
+                cost[:, refimg_fea_H.size()[1]:, i - 1, :, :] = targetimg_fea_t
 
-            cost_L = torch.FloatTensor(refimg_fea_L.size()[0], refimg_fea_L.size()[1]*2, self.nlabel//2,  refimg_fea_L.size()[2],  refimg_fea_L.size()[3]).zero_().to(self.device)
+            cost_L = torch.FloatTensor(refimg_fea_L.size()[0], refimg_fea_L.size()[1] * 2, self.nlabel // 2,
+                                       refimg_fea_L.size()[2], refimg_fea_L.size()[3]).zero_().to(self.device)
             for i in range(self.nlabel // 2):
                 float_index = 1 + 0.5 + 2 * i
                 #     print(float_index)
                 depth = torch.div(disp2depth_L, float_index)
-                targetimg_fea_t = inverse_warp(targetimg_fea_L, depth, pose[:,j], intrinsics8, intrinsics_inv8)
-                cost_L[:, :refimg_fea_L.size()[1], i-1, :,:] = refimg_fea_L
-                cost_L[:, refimg_fea_L.size()[1]:, i-1, :,:] = targetimg_fea_t
+                targetimg_fea_t = inverse_warp(targetimg_fea_L, depth, pose[:, j], intrinsics8, intrinsics_inv8)
+                cost_L[:, :refimg_fea_L.size()[1], i - 1, :, :] = refimg_fea_L
+                cost_L[:, refimg_fea_L.size()[1]:, i - 1, :, :] = targetimg_fea_t
 
             cost0 = self.cost_regularization(cost, cost_L)
 
@@ -191,14 +197,14 @@ class octDPSNet(nn.Module):
             else:
                 costs = addHL(costs, cost0)
 
-        costs, costs_L = costs[0]/len(targets), costs[1]/len(targets)
+        costs, costs_L = costs[0] / len(targets), costs[1] / len(targets)
 
         # depth refinement
-        costss_L = torch.FloatTensor(refimg_fea_L.size()[0], 1, self.nlabel//2, refimg_fea_L.size()[2],
+        costss_L = torch.FloatTensor(refimg_fea_L.size()[0], 1, self.nlabel // 2, refimg_fea_L.size()[2],
                                      refimg_fea_L.size()[3]).zero_().to(self.device)
-        for i in range(self.nlabel//2):
+        for i in range(self.nlabel // 2):
             costt_L = costs_L[:, :, i, :, :]
-            costss_L[:, :, i, :, :] = self.convs_L(torch.cat([refimg_fea_L, costt_L],1)) + costt_L
+            costss_L[:, :, i, :, :] = self.convs_L(torch.cat([refimg_fea_L, costt_L], 1)) + costt_L
 
         # TODO
         # combine low-res high-res volume
@@ -235,15 +241,15 @@ class octDPSNet(nn.Module):
             costs_se_up = F.interpolate((costs_se_H + costs_se_L), vol_size, mode='trilinear', align_corners=False)
             pred_se = F.softmax(torch.squeeze(costs_se_up, 1), dim=1)
             pred_se = disparityregression(self.nlabel, 1)(pred_se).unsqueeze(1)
-            depth_se = self.mindepth*self.nlabel / pred_se
+            depth_se = self.mindepth * self.nlabel / pred_se
 
             #######################################
             # Loss is not calculated from depth L
             # # therefore inverse depth upsampling is used here to save memory
-            pred_L = F.softmax(torch.squeeze(costss_L,1), dim=1)
+            pred_L = F.softmax(torch.squeeze(costss_L, 1), dim=1)
             pred_L = disparityregression(self.nlabel, 1)(pred_L).unsqueeze(1)
             pred_L = F.interpolate(pred_L, [ref.size()[2], ref.size()[3]], mode='bilinear', align_corners=False)
-            depth_L = self.mindepth*self.nlabel / pred_L
+            depth_L = self.mindepth * self.nlabel / pred_L
 
             # costss_Lup = F.interpolate(costss_L, vol_size, mode='trilinear', align_corners=False)
             # pred_L = F.softmax(torch.squeeze(costss_Lup,1), dim=1)

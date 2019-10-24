@@ -6,11 +6,14 @@ import random
 import os
 
 import json
+
+
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
 
 def load_as_float(path):
     return imread(path).astype(np.float32)
@@ -32,56 +35,56 @@ class SequenceFolder(data.Dataset):
         np.random.seed(seed)
         random.seed(seed)
         self.root = Path(root)
-        scene_list_path = self.root/ttype
-        scenes = [self.root/folder[:-1] for folder in open(scene_list_path)]
+        scene_list_path = self.root / ttype
+        scenes = [self.root / folder[:-1] for folder in open(scene_list_path)]
         self.ttype = ttype
         self.scenes = sorted(scenes)
         self.transform = transform
-        
-        self.json_fname = self.root/ttype+'.json'
+
+        self.json_fname = self.root / ttype + '.json'
         if not os.path.isfile(self.json_fname):
             print("Generating json file. Please wait for a while...")
             self.crawl_folders(sequence_length)
             print('Done!')
-        
+
         with open(self.json_fname, mode='r') as f:
             self.samples = json.load(f)
 
     def crawl_folders(self, sequence_length):
         sequence_set = []
-        demi_length = sequence_length//2
+        demi_length = sequence_length // 2
 
         for scene in self.scenes:
-            intrinsics = np.genfromtxt(scene/'cam.txt').astype(np.float32).reshape((3, 3))
-            poses = np.genfromtxt(scene/'poses.txt').astype(np.float32)
+            intrinsics = np.genfromtxt(scene / 'cam.txt').astype(np.float32).reshape((3, 3))
+            poses = np.genfromtxt(scene / 'poses.txt').astype(np.float32)
             imgs = sorted(scene.files('*.jpg'))
             if len(imgs) < sequence_length:
                 continue
             for i in range(len(imgs)):
                 if i < demi_length:
-                    shifts = list(range(0,sequence_length))
+                    shifts = list(range(0, sequence_length))
                     shifts.pop(i)
-                elif i >= len(imgs)-demi_length:
-                    shifts = list(range(len(imgs)-sequence_length,len(imgs)))
-                    shifts.pop(i-len(imgs))
+                elif i >= len(imgs) - demi_length:
+                    shifts = list(range(len(imgs) - sequence_length, len(imgs)))
+                    shifts.pop(i - len(imgs))
                 else:
-                    shifts = list(range(i-demi_length, i+(sequence_length+1)//2))
+                    shifts = list(range(i - demi_length, i + (sequence_length + 1) // 2))
                     shifts.pop(demi_length)
 
                 img = imgs[i]
-                depth = img.dirname()/img.name[:-4] + '.npy'
-                pose_tgt = np.concatenate((poses[i,:].reshape((3,4)), np.array([[0,0,0,1]])), axis=0)
+                depth = img.dirname() / img.name[:-4] + '.npy'
+                pose_tgt = np.concatenate((poses[i, :].reshape((3, 4)), np.array([[0, 0, 0, 1]])), axis=0)
                 sample = {'intrinsics': intrinsics, 'tgt': img, 'tgt_depth': depth, 'ref_imgs': [], 'ref_poses': []}
                 for j in shifts:
                     sample['ref_imgs'].append(imgs[j])
-                    pose_src = np.concatenate((poses[j,:].reshape((3,4)), np.array([[0,0,0,1]])), axis=0)
+                    pose_src = np.concatenate((poses[j, :].reshape((3, 4)), np.array([[0, 0, 0, 1]])), axis=0)
                     pose_rel = pose_src @ np.linalg.inv(pose_tgt)
-                    pose = pose_rel[:3,:].reshape((1,3,4)).astype(np.float32)
+                    pose = pose_rel[:3, :].reshape((1, 3, 4)).astype(np.float32)
                     sample['ref_poses'].append(pose)
                 sequence_set.append(sample)
         if self.ttype == 'train.txt':
             random.shuffle(sequence_set)
-            
+
         with open(self.json_fname, mode='w') as f:
             f.write(json.dumps(sequence_set, cls=NumpyEncoder))
 
@@ -92,7 +95,8 @@ class SequenceFolder(data.Dataset):
         ref_imgs = [load_as_float(ref_img) for ref_img in sample['ref_imgs']]
         ref_poses = [np.array(it, dtype=np.float32) for it in sample['ref_poses']]
         if self.transform is not None:
-            imgs, tgt_depth, intrinsics = self.transform([tgt_img] + ref_imgs, tgt_depth, np.array(sample['intrinsics'], dtype=np.float32))
+            imgs, tgt_depth, intrinsics = self.transform([tgt_img] + ref_imgs, tgt_depth,
+                                                         np.array(sample['intrinsics'], dtype=np.float32))
             tgt_img = imgs[0]
             ref_imgs = imgs[1:]
         else:

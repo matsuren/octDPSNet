@@ -55,15 +55,18 @@ parser.add_argument('--log-full', default='progress_log_full.csv', metavar='PATH
 parser.add_argument('--log-output', action='store_true', help='show depth for tensorboard')
 parser.add_argument('--ttype', default='train.txt', type=str, help='Text file indicates input data')
 parser.add_argument('--ttype2', default='val.txt', type=str, help='Text file indicates input data')
-parser.add_argument('-f', '--training-output-freq', type=int, help='frequence for outputting dispnet outputs and warped imgs at training for all scales if 0 will not output',
+parser.add_argument('-f', '--training-output-freq', type=int,
+                    help='frequence for outputting dispnet outputs and warped imgs at training for all scales if 0 will not output',
                     metavar='N', default=100)
 parser.add_argument('--nlabel', type=int, default=64, help='number of label')
 parser.add_argument('--mindepth', type=float, default=0.5, help='minimum depth')
-parser.add_argument('--alpha', type=float, default=0.9375, help='ratio of low frequency')  # 0.9375, 0.875, 0.75, 0.5, 0.25
+parser.add_argument('--alpha', type=float, default=0.9375,
+                    help='ratio of low frequency')  # 0.9375, 0.875, 0.75, 0.5, 0.25
 # parser.add_argument('--reduction', type=int, default=8, help='reduction rate for oct SE')  # 8, 16
 
 n_iter = 0
 start_epoch = 0
+
 
 def main():
     global n_iter, start_epoch
@@ -75,7 +78,7 @@ def main():
     #################################
     # save folder
     save_path = save_path_formatter(args, parser)
-    args.save_path = 'checkpoints'/save_path
+    args.save_path = 'checkpoints' / save_path
     print('=> will save everything to {}'.format(args.save_path))
     args.save_path.makedirs_p()
     torch.manual_seed(args.seed)
@@ -84,7 +87,7 @@ def main():
     output_writers = []
     if args.log_output:
         for i in range(3):
-            output_writers.append(SummaryWriter(args.save_path/'valid'/str(i)))
+            output_writers.append(SummaryWriter(args.save_path / 'valid' / str(i)))
 
     # Data loading code
     normalize = custom_transforms.Normalize(mean=[0.5, 0.5, 0.5],
@@ -148,7 +151,7 @@ def main():
         print("=> Resume training from epoch {}".format(start_epoch))
         for param_group in optimizer.param_groups:
             if args.lr != param_group['lr']:
-                print('lr is changed from:{} to {}'.format(param_group['lr'] ,args.lr))
+                print('lr is changed from:{} to {}'.format(param_group['lr'], args.lr))
                 param_group['lr'] = args.lr
             else:
                 print('lr:', param_group['lr'])
@@ -156,11 +159,11 @@ def main():
         octdps.init_weights()
     octdps = torch.nn.DataParallel(octdps)
 
-    with open(args.save_path/args.log_summary, 'w') as csvfile:
+    with open(args.save_path / args.log_summary, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter='\t')
         writer.writerow(['train_loss', 'validation_loss'])
 
-    with open(args.save_path/args.log_full, 'w') as csvfile:
+    with open(args.save_path / args.log_full, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter='\t')
         writer.writerow(['train_loss'])
 
@@ -189,7 +192,7 @@ def main():
             },
             epoch)
 
-        with open(args.save_path/args.log_summary, 'a') as csvfile:
+        with open(args.save_path / args.log_summary, 'a') as csvfile:
             writer = csv.writer(csvfile, delimiter='\t')
             writer.writerow([train_loss, decisive_error])
 
@@ -216,15 +219,15 @@ def train(args, train_loader, octdps, optimizer, epoch_size, train_writer, epoch
         tgt_depth_var = tgt_depth.cuda()
 
         # compute output
-        pose = torch.cat(ref_poses_var,1)
+        pose = torch.cat(ref_poses_var, 1)
 
         # get mask
-        mask = (tgt_depth_var <= args.nlabel*args.mindepth) & (tgt_depth_var >= args.mindepth)
+        mask = (tgt_depth_var <= args.nlabel * args.mindepth) & (tgt_depth_var >= args.mindepth)
         mask.detach_()
 
         #
         depths = octdps(tgt_img_var, ref_imgs_var, pose, intrinsics_var, intrinsics_inv_var)
-        disps = [args.mindepth*args.nlabel/depth for depth in depths]
+        disps = [args.mindepth * args.nlabel / depth for depth in depths]
 
         loss = 0.
         # loss += F.smooth_l1_loss(torch.squeeze(depths[0], 1)[mask], tgt_depth_var[mask], reduction='mean') * 0.5
@@ -239,24 +242,25 @@ def train(args, train_loader, octdps, optimizer, epoch_size, train_writer, epoch
         if args.training_output_freq > 0 and n_iter % args.training_output_freq == 0:
 
             train_writer.add_image('train Input', tensor2array(tgt_img[0]), n_iter)
-            
+
             depth_to_show = tgt_depth_var.data[0].cpu()
-            depth_to_show[depth_to_show > args.nlabel*args.mindepth] = args.nlabel*args.mindepth
-            disp_to_show = (args.nlabel*args.mindepth/depth_to_show)
+            depth_to_show[depth_to_show > args.nlabel * args.mindepth] = args.nlabel * args.mindepth
+            disp_to_show = (args.nlabel * args.mindepth / depth_to_show)
             disp_to_show[disp_to_show > args.nlabel] = 0
             train_writer.add_image('train Dispnet GT Normalized',
                                    tensor2array(disp_to_show, max_value=args.nlabel, colormap='bone'),
                                    n_iter)
             train_writer.add_image('train Depth GT Normalized',
-                                   tensor2array(depth_to_show, max_value=args.nlabel*args.mindepth*0.3),
+                                   tensor2array(depth_to_show, max_value=args.nlabel * args.mindepth * 0.3),
                                    n_iter)
 
-            for k,scaled_depth in enumerate(depths):
+            for k, scaled_depth in enumerate(depths):
                 train_writer.add_image('train Dispnet Output Normalized {}'.format(k),
                                        tensor2array(disps[k].data[0].cpu(), max_value=args.nlabel, colormap='bone'),
                                        n_iter)
                 train_writer.add_image('train Depth Output Normalized {}'.format(k),
-                                       tensor2array(depths[k].data[0].cpu(), max_value=args.nlabel*args.mindepth*0.3),
+                                       tensor2array(depths[k].data[0].cpu(),
+                                                    max_value=args.nlabel * args.mindepth * 0.3),
                                        n_iter)
 
         # record loss and EPE
@@ -271,12 +275,14 @@ def train(args, train_loader, octdps, optimizer, epoch_size, train_writer, epoch
         batch_time.update(time.time() - end)
         end = time.time()
 
-        with open(args.save_path/args.log_full, 'a') as csvfile:
+        with open(args.save_path / args.log_full, 'a') as csvfile:
             writer = csv.writer(csvfile, delimiter='\t')
             writer.writerow([loss.item()])
         if i % args.print_freq == 0:
             print('Train({}): Time {} Data {} Loss {}, {}/{}({:.2f}%)'.format(epoch,
-                batch_time, data_time, losses, i, len(train_loader), 100*i/len(train_loader)), flush=True)
+                                                                              batch_time, data_time, losses, i,
+                                                                              len(train_loader),
+                                                                              100 * i / len(train_loader)), flush=True)
         if i >= epoch_size - 1:
             break
 
@@ -304,29 +310,37 @@ def validate_with_gt(args, val_loader, octdps, epoch, output_writers=[]):
             intrinsics_inv_var = intrinsics_inv.cuda()
             tgt_depth_var = tgt_depth.cuda()
 
-            pose = torch.cat(ref_poses_var,1)
+            pose = torch.cat(ref_poses_var, 1)
 
             output_depth = octdps(tgt_img_var, ref_imgs_var, pose, intrinsics_var, intrinsics_inv_var)
-            output_disp = args.nlabel*args.mindepth/(output_depth)
+            output_disp = args.nlabel * args.mindepth / (output_depth)
 
-            mask = (tgt_depth <= args.nlabel*args.mindepth) & (tgt_depth >= args.mindepth) & (tgt_depth == tgt_depth)
+            mask = (tgt_depth <= args.nlabel * args.mindepth) & (tgt_depth >= args.mindepth) & (tgt_depth == tgt_depth)
 
-            output = torch.squeeze(output_depth.data.cpu(),1)
+            output = torch.squeeze(output_depth.data.cpu(), 1)
 
-            if log_outputs and i % 100 == 0 and i/100 < len(output_writers):
-                index = int(i//100)
+            if log_outputs and i % 100 == 0 and i / 100 < len(output_writers):
+                index = int(i // 100)
                 if epoch == 0:
                     output_writers[index].add_image('val Input', tensor2array(tgt_img[0]), 0)
                     depth_to_show = tgt_depth_var.data[0].cpu()
-                    depth_to_show[depth_to_show > args.nlabel*args.mindepth] = args.nlabel*args.mindepth
-                    disp_to_show = (args.nlabel*args.mindepth/depth_to_show)
+                    depth_to_show[depth_to_show > args.nlabel * args.mindepth] = args.nlabel * args.mindepth
+                    disp_to_show = (args.nlabel * args.mindepth / depth_to_show)
                     disp_to_show[disp_to_show > args.nlabel] = 0
 
-                    output_writers[index].add_image('val target Disparity Normalized', tensor2array(disp_to_show, max_value=args.nlabel, colormap='bone'), epoch)
-                    output_writers[index].add_image('val target Depth Normalized', tensor2array(depth_to_show, max_value=args.nlabel*args.mindepth*0.3), epoch)
+                    output_writers[index].add_image('val target Disparity Normalized',
+                                                    tensor2array(disp_to_show, max_value=args.nlabel, colormap='bone'),
+                                                    epoch)
+                    output_writers[index].add_image('val target Depth Normalized', tensor2array(depth_to_show,
+                                                                                                max_value=args.nlabel * args.mindepth * 0.3),
+                                                    epoch)
 
-                output_writers[index].add_image('val Dispnet Output Normalized', tensor2array(output_disp.data[0].cpu(), max_value=args.nlabel, colormap='bone'), epoch)
-                output_writers[index].add_image('val Depth Output', tensor2array(output_depth.data[0].cpu(), max_value=args.nlabel*args.mindepth*0.3), epoch)
+                output_writers[index].add_image('val Dispnet Output Normalized',
+                                                tensor2array(output_disp.data[0].cpu(), max_value=args.nlabel,
+                                                             colormap='bone'), epoch)
+                output_writers[index].add_image('val Depth Output', tensor2array(output_depth.data[0].cpu(),
+                                                                                 max_value=args.nlabel * args.mindepth * 0.3),
+                                                epoch)
 
             errors.update(compute_errors_train(tgt_depth, output, mask))
 
@@ -335,7 +349,11 @@ def validate_with_gt(args, val_loader, octdps, epoch, output_writers=[]):
             end = time.time()
             if i % args.print_freq == 0:
                 print('valid({}): Time {} Abs Error {:.4f} ({:.4f}), {}/{}({:.2f}%)'.format(epoch,
-                    batch_time, errors.val[0], errors.avg[0], i, len(val_loader), 100*i/len(val_loader)), flush=True)
+                                                                                            batch_time, errors.val[0],
+                                                                                            errors.avg[0], i,
+                                                                                            len(val_loader),
+                                                                                            100 * i / len(val_loader)),
+                      flush=True)
 
     return errors.avg, error_names
 

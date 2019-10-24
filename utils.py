@@ -9,6 +9,7 @@ from collections import OrderedDict
 def save_path_formatter(args, parser):
     def is_default(key, value):
         return value == parser.get_default(key)
+
     args_dict = vars(args)
     data_folder_name = str(Path(args_dict['data']).normpath().name)
     folder_string = [data_folder_name]
@@ -25,7 +26,7 @@ def save_path_formatter(args, parser):
             folder_string.append('{}{}'.format(prefix, value))
     save_path = Path(','.join(folder_string))
     timestamp = datetime.datetime.now().strftime("%m-%d-%H:%M")
-    return save_path/timestamp
+    return save_path / timestamp
 
 
 def tensor2array(tensor, max_value=255, colormap='rainbow'):
@@ -34,27 +35,27 @@ def tensor2array(tensor, max_value=255, colormap='rainbow'):
     if tensor.ndimension() == 2 or tensor.size(0) == 1:
         try:
             import cv2
-            if cv2.__version__.startswith('2'): # 2.4
+            if cv2.__version__.startswith('2'):  # 2.4
                 color_cvt = cv2.cv.CV_BGR2RGB
-            else:  
+            else:
                 color_cvt = cv2.COLOR_BGR2RGB
             if colormap == 'rainbow':
                 colormap = cv2.COLORMAP_RAINBOW
             elif colormap == 'bone':
                 colormap = cv2.COLORMAP_BONE
-            array = (tensor.squeeze().numpy()/max_value).clip(0, 1)
-            array = (array*255).astype(np.uint8)
+            array = (tensor.squeeze().numpy() / max_value).clip(0, 1)
+            array = (array * 255).astype(np.uint8)
             colored_array = cv2.applyColorMap(array, colormap)
-            array = cv2.cvtColor(colored_array, color_cvt).astype(np.float32)/255
+            array = cv2.cvtColor(colored_array, color_cvt).astype(np.float32) / 255
             array = array.transpose(2, 0, 1)
         except ImportError:
             if tensor.ndimension() == 2:
                 tensor.unsqueeze_(2)
-            array = (tensor.expand(tensor.size(0), tensor.size(1), 3).numpy()/max_value).clip(0,1)
+            array = (tensor.expand(tensor.size(0), tensor.size(1), 3).numpy() / max_value).clip(0, 1)
 
     elif tensor.ndimension() == 3:
-        #assert(tensor.size(0) == 3)
-        array = 0.5 + tensor.numpy()*0.5
+        # assert(tensor.size(0) == 3)
+        array = 0.5 + tensor.numpy() * 0.5
     return array
 
 
@@ -62,7 +63,7 @@ def save_checkpoint(save_path, one_state, epoch, filename='checkpoint.pth.tar'):
     file_prefixes = ['octdpsnet']
     states = [one_state]
     for (prefix, state) in zip(file_prefixes, states):
-        torch.save(state, save_path/'{}_{}_{}'.format(prefix,epoch,filename))
+        torch.save(state, save_path / '{}_{}_{}'.format(prefix, epoch, filename))
 
 
 class AverageMeter(object):
@@ -74,17 +75,17 @@ class AverageMeter(object):
         self.reset(self.meters)
 
     def reset(self, i):
-        self.val = [0]*i
-        self.avg = [0]*i
-        self.sum = [0]*i
+        self.val = [0] * i
+        self.avg = [0] * i
+        self.sum = [0] * i
         self.count = 0
 
     def update(self, val, n=1):
         if not isinstance(val, list):
             val = [val]
-        assert(len(val) == self.meters)
+        assert (len(val) == self.meters)
         self.count += n
-        for i,v in enumerate(val):
+        for i, v in enumerate(val):
             self.val[i] = v
             self.sum[i] += v * n
             self.avg[i] = self.sum[i] / self.count

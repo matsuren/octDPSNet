@@ -43,7 +43,7 @@ class ArrayToTensor(object):
             # put it from HWC to CHW format
             im = np.transpose(im, (2, 0, 1))
             # handle numpy array
-            tensors.append(torch.from_numpy(im).float()/255)
+            tensors.append(torch.from_numpy(im).float() / 255)
         return tensors, depth, intrinsics
 
 
@@ -57,8 +57,8 @@ class RandomScaleCrop(object):
         out_h = 240
         out_w = 320
         in_h, in_w, _ = images[0].shape
-        x_scaling = np.random.uniform(out_w/in_w, 1)
-        y_scaling = np.random.uniform(out_h/in_h, 1)
+        x_scaling = np.random.uniform(out_w / in_w, 1)
+        y_scaling = np.random.uniform(out_h / in_h, 1)
         scaled_h, scaled_w = round(in_h * y_scaling), round(in_w * x_scaling)
 
         output_intrinsics[0] *= x_scaling
@@ -74,8 +74,8 @@ class RandomScaleCrop(object):
         cropped_images = [im[offset_y:offset_y + out_h, offset_x:offset_x + out_w, :] for im in scaled_images]
         cropped_depth = scaled_depth[offset_y:offset_y + out_h, offset_x:offset_x + out_w]
 
-        output_intrinsics[0,2] -= offset_x
-        output_intrinsics[1,2] -= offset_y
+        output_intrinsics[0, 2] -= offset_x
+        output_intrinsics[1, 2] -= offset_y
 
         return cropped_images, cropped_depth, output_intrinsics
 
@@ -100,6 +100,5 @@ class ColorJitter(object):
             random_order=True)
 
     def __call__(self, images, depth, intrinsics):
-
         out_images = [self.some_aug.augment_image(it) for it in images]
         return out_images, depth, intrinsics
