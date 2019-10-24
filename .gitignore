@@ -1,4 +1,7 @@
 __pycache__/
 *.py[cod]
+*.ply
+*.lock 
 
 .ipynb_checkpoints/
+.idea/
