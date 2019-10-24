@@ -1,6 +1,5 @@
 from __future__ import division
 import torch
-from torch.autograd import Variable
 
 pixel_coords = None
 

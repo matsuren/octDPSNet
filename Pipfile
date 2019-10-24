@@ -9,10 +9,8 @@ h5py = "*"
 lz4 = "*"
 
 [packages]
-blessings = "*"
 path-py = "*"
 joblib = "*"
-progressbar2 = "*"
 tensorboardx = "*"
 opencv-python = "*"
 scipy = "==1.1.0"

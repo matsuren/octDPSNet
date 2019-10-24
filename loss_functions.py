@@ -1,6 +1,5 @@
 from __future__ import division
 import torch
-from torch import nn
 import numpy as np
 
 def compute_errors_test(gt, pred):

@@ -15,7 +15,7 @@ import custom_transforms
 from utils import tensor2array, save_checkpoint, save_path_formatter
 from loss_functions import compute_errors_train
 
-from logger import AverageMeter
+from utils import AverageMeter
 from tensorboardX import SummaryWriter
 from sequence_folders import SequenceFolder
 from models import octconv

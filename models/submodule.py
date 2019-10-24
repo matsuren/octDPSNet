@@ -3,8 +3,6 @@ import torch
 import torch.nn as nn
 import torch.utils.data
 import torch.nn.functional as F
-import math
-import numpy as np
 
 def convbn(in_planes, out_planes, kernel_size, stride, pad, dilation):
 
