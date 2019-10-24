@@ -1,15 +1,15 @@
 # OctDPSNet
-Pytorch implementation of [Octave Deep Plane-sweeping Network: Reducing Spatial Redundancy for Learning-based Plane-sweeping Stereo](http://dx.doi.org/10.1109/ACCESS.2019.2947195) (Early Access). 
+PyTorch implementation of [Octave Deep Plane-sweeping Network: Reducing Spatial Redundancy for Learning-based Plane-sweeping Stereo](http://dx.doi.org/10.1109/ACCESS.2019.2947195). 
 
+If you use OctDPSNet for your academic research, please cite the following paper.
 ```
-  @article{KomatsuAccess2019,
+  @article{octDPSNet2019,
     author={R. Komatsu, H. Fujii, Y. Tamura, A. Yamashita, and H. Asama},
     journal={IEEE Access},
     title={Octave Deep Plane-sweeping Network: Reducing Spatial Redundancy for Learning-based Plane-sweeping Stereo},
     year={2019},
-    volume={},
-    number={},
-    pages={},
+    volume={7},
+    pages={150306-150317},
     doi={10.1109/ACCESS.2019.2947195},
   }
 ```
