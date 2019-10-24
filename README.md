@@ -1,6 +1,8 @@
 # OctDPSNet
 PyTorch implementation of [Octave Deep Plane-sweeping Network: Reducing Spatial Redundancy for Learning-based Plane-sweeping Stereo](http://dx.doi.org/10.1109/ACCESS.2019.2947195). 
 
+[![octdpsnet_video](img/overlay.png)](http://ieeetv.ieee.org/media/ieeetvmobile/xplore/access-gavideo-2947195.mp4)
+
 If you use OctDPSNet for your academic research, please cite the following paper.
 ```
   @article{octDPSNet2019,
