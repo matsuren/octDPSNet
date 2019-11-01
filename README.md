@@ -28,6 +28,10 @@ Examples of the point cloud are displayed here.
 <img src="./sample_data/sun3d_test_00047/out.gif" width="350px">
 </span>
 
+
+### Combine with visual SLAM
+If you want to use OctDPSNet in real world, we recommend you to use it with visual SLAM since it's easy to get camera poses. Please see `openvslam` branch.
+
 ## Requirements
 python >= 3.5  
 CUDA   
