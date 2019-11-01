@@ -69,101 +69,33 @@ python demo.py
 ```
 After running the command, you will see point cloud in Open3D visualization window and `results.ply` will be generated in the current directory.
 
-## Prepare dataset
-### Download DeMoN dataset
-We use [DeMoN datasets](https://lmb.informatik.uni-freiburg.de/people/ummenhof/depthmotionnet/) for training and testing.  
-
-Please follow the instruction [here (sunghoonim/DPSNet)](https://github.com/sunghoonim/DPSNet#data-praparation) to prepare the datasets or run the following command.
-
+## Combine with OpenVSLAM
+### Demo
+Some images and camera poses are already bundled with this repository, so you can give it a try even without OpenVSLAM. Run the following command.
 ```bash
-cd $DATASETROOT
-mkdir demon && cd demon
-git clone --depth 1 https://github.com/matsuren/octDPSNet.git tmp_dir_
-bash ./tmp_dir_/preparation/download_testdata.sh
-python ./tmp_dir_/preparation/preparedata_test.py
-
-# Download train dataset. Please wait for a while. 
-# It takes up huge disk space (around 300GB)
-bash ./tmp_dir_/preparation/download_traindata.sh
-# Remove bugfix
-cd traindata
-mv rgbd_bugfix_10_to_20_3d_train.h5 rgbd_10_to_20_3d_train.h5
-mv rgbd_bugfix_10_to_20_handheld_train.h5 rgbd_10_to_20_handheld_train.h5
-mv rgbd_bugfix_20_to_inf_3d_train.h5 rgbd_20_to_inf_3d_train.h5
-mv rgbd_bugfix_20_to_inf_handheld_train.h5 rgbd_20_to_inf_handheld_train.h5
-cd ..
-python ./tmp_dir_/preparation/preparedata_train.py
+# Make sure you're in the virtual environment
+python FromSLAM_demo.py
 ```
 
-For the preparation of ETH3D dataset, please see [ETH3D dataset](#ETH3D-dataset).
+Then, simple GUI with three buttons will be appeared. 
 
+If you want to try depth reconstruction from three view, push `Three view`. 
 
-## Train
-### Training
-```bash
-python train.py
-$DATASETROOT/demon/train/ --log-output --alpha 0.75
-```
+If you want to try volume reconstruction from multiple view, push `Volume reconstruction`. Depthmaps from three view are integrated by TSDF volume.
 
-**Note:** If you want to try other alpha value (`--alpha`), please check [How to choose α](#How-to-choose-α).
-
-### Reduce GPU memory consumption
-If you don't have enough GPU memory.
-Set smaller number for `--nlabel` (Default is 64), `--batch-size` (Default is 16).
-<!-- Default value for `--alpha` is 0.9375, so you don't have to change it. -->
-E.g.,
-```bash
-python train.py
-$DATASETROOT/demon/train/ --log-output --nlabel 16 --batch-size 8
-```
-## Test
-### DeMoN dataset
+### OpenVSLAM
+Clone the following repository which is the modified version of OpenVSLAM for OctDPSNet. We just add additional buttons and key binding to Pangolin GUI to save images and camera poses.
 
 ```bash
-cd $octDPSNet
-python test.py $DATASETROOT/hogehoge --alpha 0.75
+git clone -b octDPSNet https://github.com/matsuren/openvslam.git
 ```
-**Note:** If you want to try your own pretrained model, please add a flag `--pretrained $PATH_TO_MODEL`.
+Please follow the OpenVSLAM official instruction [here](https://openvslam.readthedocs.io/en/master/installation.html) to install OpenVSLAM. 
 
-### ETH3D dataset
+The explaination of the additional buttons and key bindings are the following.
 
-#### Download dataset
-Download ETH3D dataset from [DeepMVS project page](https://phuang17.github.io/DeepMVS/index.html) and [sunghoonim/DPSNet](https://github.com/sunghoonim/DPSNet) by executing the following commands.
+- Three buttons on Pangolin GUI: `Add left image`, `Add center image`, and `Add right image`, are used to save images and poses for `Three view`. 
+- 'S' key is used to save images and poses for `Volume reconstruction`. 
 
-```bash
-cd $DATASETROOT
-wget https://www.dropbox.com/s/n26v56eqj0jpd60/ETH3D_results.zip  
-unzip ETH3D_results.zip
-git clone --depth 1 https://github.com/sunghoonim/DPSNet.git DPSNetTmp
-cp -a DPSNetTmp/dataset/ETH3D_results .
-rm ETH3D_results.zip DPSNetTmp -rf
-```
+Please open issues if you have any questions.
 
-#### Test on ETH3D dataset
-```bash
-cd $octDPSNet
-python test_ETH3D.py $DATASETROOT/ETH3D_results --sequence-length 2 --alpha 0.75
-```
-**Note:** If you want to try your own pretrained model, please add a flag `--pretrained $PATH_TO_MODEL`.
-
-## Test results on ETH3D dataset
-You can download the test results on ETH3D dataset [here (ETH3D_results.zip)](https://onedrive.live.com/?authkey=%21AG4yhtP0Yp39t6o&id=781BBA0C6BA3A88E%214672&cid=781BBA0C6BA3A88E).
-The directory structure is the same as [DeepMVS](https://phuang17.github.io/DeepMVS/index.html).
-
-
-## How to choose α
-OctDPSNet has a hyper-parameter α (`--alpha`) that controls the ratio of low spatial frequency features. For example, `α=0.75` implies that 75% of the features are low spatial frequency features. If α is increased, then less memory and computation resources are used, but useful information may be lost.
-
-We recommend you to choose α (`--alpha`) value from the following:
-
-- 0.25 &nbsp;&nbsp; (C_h=24 and C_l=8)
-- 0.5 &nbsp; &nbsp;&nbsp; (C_h=16 and C_l=16)
-- 0.75  &nbsp; &nbsp;(C_h=8 and C_l=24)
-- 0.875  &nbsp;(C_h=4 and C_l=28)
-- 0.9375 (C_h=2 and C_l=30)
-
-Here, C_h and C_l are the channel numbers of the high and low spatial frequency features, respectively.
-
-## Acknowledgement
-This repository is based on [sunghoonim/DPSNet](https://github.com/sunghoonim/DPSNet). 
 
