@@ -9,7 +9,7 @@ from models.octconv import OctConv, OctConv3d, oct_feature_extraction, oct_convb
 from models.octconv import disparityregression
 from models.octconv import _LeakyReLU, _ReLU
 from models import octconv
-from inverse_warp import inverse_warp
+from inverse_warp import inverse_warp, get_homography, homography_transform
 from functools import partial
 from torch.utils import model_zoo
 
@@ -164,34 +164,55 @@ class octDPSNet(nn.Module):
 
         refimg_fea_H, refimg_fea_L = self.feature_extraction(ref)
 
-        disp2depth = torch.ones(refimg_fea_H.size(0), refimg_fea_H.size(2), refimg_fea_H.size(3)).to(
-            self.device) * self.mindepth * self.nlabel
-        disp2depth_L = torch.ones(refimg_fea_L.size(0), refimg_fea_L.size(2), refimg_fea_L.size(3)).to(
-            self.device) * self.mindepth * self.nlabel
+        B, C_H, H, W = refimg_fea_H.size()
+        C_L = refimg_fea_L.size(1)
+
+        # pixel coordinate
+        i_range = torch.arange(0, H).view(1, H, 1).expand(1, H, W).type_as(refimg_fea_H)  # [1, H, W]
+        j_range = torch.arange(0, W).view(1, 1, W).expand(1, H, W).type_as(refimg_fea_H)  # [1, H, W]
+        ones = torch.ones(1, H, W).type_as(refimg_fea_H)
+        pixel_coords = torch.stack((j_range, i_range, ones), dim=1)  # [1, 3, H, W]
+        pixel_coords_H = pixel_coords[:, :, :H, :W].expand(B, 3, H, W).contiguous().view(B, 3, -1)
+        pixel_coords_L = pixel_coords[:, :, :H//2, :W//2].expand(B, 3, H//2, W//2).contiguous().view(B, 3, -1)
+        # disp2depth = torch.full((B, H, W), self.mindepth * self.nlabel, device=self.device)
+        # disp2depth_L = torch.full((B, H//2, W//2), self.mindepth * self.nlabel, device=self.device)
 
         for j, target in enumerate(targets):
-            cost = torch.FloatTensor(refimg_fea_H.size()[0], refimg_fea_H.size()[1] * 2, self.nlabel,
-                                     refimg_fea_H.size()[2], refimg_fea_H.size()[3]).zero_().to(self.device)
+            cost = torch.zeros((B, C_H * 2, self.nlabel, H, W), device=self.device)
             targetimg_fea_H, targetimg_fea_L = self.feature_extraction(target)
 
             for i in range(1, self.nlabel + 1):
-                depth = torch.div(disp2depth, i)
-                targetimg_fea_t = inverse_warp(targetimg_fea_H, depth, pose[:, j], intrinsics4, intrinsics_inv4)
-                cost[:, :refimg_fea_H.size()[1], i - 1, :, :] = refimg_fea_H
-                cost[:, refimg_fea_H.size()[1]:, i - 1, :, :] = targetimg_fea_t
+                # depth = torch.div(disp2depth, i)
+                depth = self.mindepth*self.nlabel/i
 
-            cost_L = torch.FloatTensor(refimg_fea_L.size()[0], refimg_fea_L.size()[1] * 2, self.nlabel // 2,
-                                       refimg_fea_L.size()[2], refimg_fea_L.size()[3]).zero_().to(self.device)
+                # targetimg_fea_t = inverse_warp(targetimg_fea_H, depth, pose[:, j], intrinsics4, intrinsics_inv4)
+                current_pixel_coords = pixel_coords_H.to(self.device)
+                homography = get_homography(depth, pose[:, j], intrinsics4, intrinsics_inv4)
+                # transform
+                pixel_coords = homography_transform(homography, current_pixel_coords, B, H, W)
+                targetimg_fea_t = torch.nn.functional.grid_sample(targetimg_fea_H, pixel_coords, padding_mode='zeros')
+
+                cost[:, :C_H, i - 1, :, :] = refimg_fea_H
+                cost[:, C_H:, i - 1, :, :] = targetimg_fea_t
+
+            cost_L = torch.zeros((B,  C_L * 2, self.nlabel // 2, H//2, W//2), device=self.device)
             for i in range(self.nlabel // 2):
                 float_index = 1 + 0.5 + 2 * i
                 #     print(float_index)
-                depth = torch.div(disp2depth_L, float_index)
-                targetimg_fea_t = inverse_warp(targetimg_fea_L, depth, pose[:, j], intrinsics8, intrinsics_inv8)
-                cost_L[:, :refimg_fea_L.size()[1], i - 1, :, :] = refimg_fea_L
-                cost_L[:, refimg_fea_L.size()[1]:, i - 1, :, :] = targetimg_fea_t
+                # depth = torch.div(disp2depth_L, float_index)
+                depth = self.mindepth*self.nlabel/float_index
+
+                # targetimg_fea_t = inverse_warp(targetimg_fea_L, depth, pose[:, j], intrinsics8, intrinsics_inv8)
+                current_pixel_coords = pixel_coords_L.to(self.device)
+                homography = get_homography(depth, pose[:, j], intrinsics8, intrinsics_inv8)
+                # transform
+                pixel_coords = homography_transform(homography, current_pixel_coords, B, H//2, W//2)
+                targetimg_fea_t = torch.nn.functional.grid_sample(targetimg_fea_L, pixel_coords, padding_mode='zeros')
+
+                cost_L[:, :C_L, i - 1, :, :] = refimg_fea_L
+                cost_L[:, C_L:, i - 1, :, :] = targetimg_fea_t
 
             cost0 = self.cost_regularization(cost, cost_L)
-
             if j == 0:
                 costs = cost0
             else:
@@ -200,16 +221,14 @@ class octDPSNet(nn.Module):
         costs, costs_L = costs[0] / len(targets), costs[1] / len(targets)
 
         # depth refinement
-        costss_L = torch.FloatTensor(refimg_fea_L.size()[0], 1, self.nlabel // 2, refimg_fea_L.size()[2],
-                                     refimg_fea_L.size()[3]).zero_().to(self.device)
+        costss_L = torch.zeros((B, 1, self.nlabel // 2, H // 2, W // 2), device=self.device)
         for i in range(self.nlabel // 2):
             costt_L = costs_L[:, :, i, :, :]
             costss_L[:, :, i, :, :] = self.convs_L(torch.cat([refimg_fea_L, costt_L], 1)) + costt_L
 
         # TODO
         # combine low-res high-res volume
-        costss_H = torch.FloatTensor(refimg_fea_H.size()[0], 1, self.nlabel, refimg_fea_H.size()[2],
-                                     refimg_fea_H.size()[3]).zero_().to(self.device)
+        costss_H = torch.zeros((B, 1, self.nlabel, H, W), device=self.device)
         refimg_fea = self.convs_H_first((refimg_fea_H, refimg_fea_L))
 
         # Squeeze and Excitation

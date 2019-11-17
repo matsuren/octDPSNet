@@ -110,3 +110,23 @@ def inverse_warp(feat, depth, pose, intrinsics, intrinsics_inv, padding_mode='ze
     projected_feat = torch.nn.functional.grid_sample(feat, src_pixel_coords, padding_mode=padding_mode)
 
     return projected_feat
+
+
+# Homography
+def get_homography(depth, pose, intrinsic, intrinsic_inv):
+    R = pose[:,:3,:3]
+    t = pose[:,:3,3].unsqueeze(2)
+    n = torch.tensor([0,0,1/depth], device=pose.device).unsqueeze(0)
+    H = R + torch.matmul(t, n)
+    H = torch.bmm(intrinsic, H).bmm(intrinsic_inv)
+    return H
+
+
+def homography_transform(homography, current_pixel_coords, B, H, W):
+    pcoords = homography.bmm(current_pixel_coords)
+    X = pcoords[:, 0]
+    Y = pcoords[:, 1]
+    Z = pcoords[:, 2].clamp(min=1e-3)
+    X_norm = 2 * (X / Z) / (W - 1) - 1  # Normalized
+    Y_norm = 2 * (Y / Z) / (H - 1) - 1  #
+    return torch.stack([X_norm, Y_norm], dim=2).view(B, H, W, 2)  # [B, H, W, 2]
