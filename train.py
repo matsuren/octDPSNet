@@ -19,6 +19,7 @@ from utils import AverageMeter
 from tensorboardX import SummaryWriter
 from sequence_folders import SequenceFolder
 from models import octconv
+from radam import RAdam
 
 parser = argparse.ArgumentParser(description='Training for octDPSNet',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -27,13 +28,13 @@ parser.add_argument('data', metavar='DIR',
                     help='path to dataset')
 parser.add_argument('-j', '--workers', default=6, type=int, metavar='N',
                     help='number of data loading workers')
-parser.add_argument('--epochs', default=20, type=int, metavar='N',
+parser.add_argument('--epochs', default=16, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--epoch-size', default=0, type=int, metavar='N',
                     help='manual epoch size (will match dataset size if not set)')
 parser.add_argument('-b', '--batch-size', default=16, type=int,
                     metavar='N', help='mini-batch size')
-parser.add_argument('--lr', '--learning-rate', default=3e-4, type=float,
+parser.add_argument('--lr', '--learning-rate', default=5e-4, type=float,
                     metavar='LR', help='initial learning rate')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
                     help='momentum for sgd, alpha parameter for adam')
@@ -131,13 +132,18 @@ def main():
     print("=> creating model")
     octdps = PSNet(args.nlabel, args.mindepth).cuda()
     cudnn.benchmark = True
-    print('=> setting adam solver')
-    optimizer = torch.optim.Adam(octdps.parameters(), args.lr,
-                                 betas=(args.momentum, args.beta),
-                                 weight_decay=args.weight_decay)
+    if False:
+        print('=> setting adam solver')
+        optimizer = torch.optim.Adam(octdps.parameters(), args.lr,
+                                     betas=(args.momentum, args.beta),
+                                     weight_decay=args.weight_decay)
+    else:
+        print('=> setting radam solver')
+        optimizer = RAdam(octdps.parameters(), args.lr, betas=(args.momentum, args.beta),
+                          weight_decay=args.weight_decay)
 
     print('=> setting scheduler')
-    scheduler = StepLR(optimizer, step_size=15, gamma=0.5)
+    scheduler = StepLR(optimizer, step_size=12, gamma=0.1)
 
     if args.pretrained:
         checkpoint = torch.load(args.pretrained)
@@ -168,12 +174,10 @@ def main():
         writer.writerow(['train_loss'])
 
     for epoch in range(start_epoch, args.epochs):
-        scheduler.step()
-
         # train for one epoch
         train_loss = train(args, train_loader, octdps, optimizer, args.epoch_size, training_writer, epoch)
         errors, error_names = validate_with_gt(args, val_loader, octdps, epoch, output_writers)
-
+        scheduler.step()
         error_string = ', '.join('{} : {:.3f}'.format(name, error) for name, error in zip(error_names, errors))
 
         for error, name in zip(errors, error_names):
