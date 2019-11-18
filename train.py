@@ -51,8 +51,6 @@ parser.add_argument('--pretrained', dest='pretrained', default=None, metavar='PA
 parser.add_argument('--seed', default=0, type=int, help='seed for random functions, and network initialization')
 parser.add_argument('--log-summary', default='progress_log_summary.csv', metavar='PATH',
                     help='csv where to save per-epoch train and valid stats')
-parser.add_argument('--log-full', default='progress_log_full.csv', metavar='PATH',
-                    help='csv where to save per-gradient descent train stats')
 parser.add_argument('--log-output', action='store_true', help='show depth for tensorboard')
 parser.add_argument('--ttype', default='train.txt', type=str, help='Text file indicates input data')
 parser.add_argument('--ttype2', default='val.txt', type=str, help='Text file indicates input data')
@@ -157,22 +155,14 @@ def main():
         scheduler.load_state_dict(checkpoint['scheduler'])
         print("=> Resume training from epoch {}".format(start_epoch))
         for param_group in optimizer.param_groups:
-            if args.lr != param_group['lr']:
-                print('lr is changed from:{} to {}'.format(param_group['lr'], args.lr))
-                param_group['lr'] = args.lr
-            else:
-                print('lr:', param_group['lr'])
+            print('lr:', param_group['lr'])
     else:
         octdps.init_weights()
     octdps = torch.nn.DataParallel(octdps)
 
     with open(args.save_path / args.log_summary, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter='\t')
-        writer.writerow(['train_loss', 'validation_loss'])
-
-    with open(args.save_path / args.log_full, 'w') as csvfile:
-        writer = csv.writer(csvfile, delimiter='\t')
-        writer.writerow(['train_loss'])
+        writer.writerow(['epoch', 'train_loss', 'validation_loss'])
 
     for epoch in range(start_epoch, args.epochs):
         # train for one epoch
@@ -200,7 +190,7 @@ def main():
 
         with open(args.save_path / args.log_summary, 'a') as csvfile:
             writer = csv.writer(csvfile, delimiter='\t')
-            writer.writerow([train_loss, decisive_error])
+            writer.writerow([epoch, train_loss, decisive_error])
 
 
 def train(args, train_loader, octdps, optimizer, epoch_size, train_writer, epoch):
@@ -249,8 +239,7 @@ def train(args, train_loader, octdps, optimizer, epoch_size, train_writer, epoch
 
             train_writer.add_image('train Input', tensor2array(tgt_img[0]), n_iter)
 
-            depth_to_show = tgt_depth_var.data[0].cpu()
-            depth_to_show[depth_to_show > args.nlabel * args.mindepth] = args.nlabel * args.mindepth
+            depth_to_show = tgt_depth[0]
             disp_to_show = (args.nlabel * args.mindepth / depth_to_show)
             disp_to_show[disp_to_show > args.nlabel] = 0
             train_writer.add_image('train Dispnet GT Normalized',
@@ -262,10 +251,10 @@ def train(args, train_loader, octdps, optimizer, epoch_size, train_writer, epoch
 
             for k, scaled_depth in enumerate(depths):
                 train_writer.add_image('train Dispnet Output Normalized {}'.format(k),
-                                       tensor2array(disps[k].data[0].cpu(), max_value=args.nlabel, colormap='bone'),
+                                       tensor2array(disps[k].detach()[0].cpu(), max_value=args.nlabel, colormap='bone'),
                                        n_iter)
                 train_writer.add_image('train Depth Output Normalized {}'.format(k),
-                                       tensor2array(depths[k].data[0].cpu(),
+                                       tensor2array(depths[k].detach()[0].cpu(),
                                                     max_value=args.nlabel * args.mindepth * 0.3),
                                        n_iter)
 
@@ -281,14 +270,10 @@ def train(args, train_loader, octdps, optimizer, epoch_size, train_writer, epoch
         batch_time.update(time.time() - end)
         end = time.time()
 
-        with open(args.save_path / args.log_full, 'a') as csvfile:
-            writer = csv.writer(csvfile, delimiter='\t')
-            writer.writerow([loss.item()])
         if i % args.print_freq == 0:
-            print('Train({}): Time {} Data {} Loss {}, {}/{}({:.2f}%)'.format(epoch,
-                                                                              batch_time, data_time, losses, i,
-                                                                              len(train_loader),
-                                                                              100 * i / len(train_loader)), flush=True)
+            print('Train({}): Time {} Data {} Loss {}, {}/{}({:.2f}%)'.format(
+                epoch, batch_time, data_time, losses, i, len(train_loader), 100 * i / len(train_loader)), flush=True)
+
         if i >= epoch_size - 1:
             break
 
@@ -354,12 +339,9 @@ def validate_with_gt(args, val_loader, octdps, epoch, output_writers=[]):
             batch_time.update(time.time() - end)
             end = time.time()
             if i % args.print_freq == 0:
-                print('valid({}): Time {} Abs Error {:.4f} ({:.4f}), {}/{}({:.2f}%)'.format(epoch,
-                                                                                            batch_time, errors.val[0],
-                                                                                            errors.avg[0], i,
-                                                                                            len(val_loader),
-                                                                                            100 * i / len(val_loader)),
-                      flush=True)
+                print('valid({}): Time {} Abs Error {:.4f} ({:.4f}), {}/{}({:.2f}%)'.format(
+                    epoch, batch_time, errors.val[0], errors.avg[0], i, len(val_loader), 100 * i / len(val_loader)),
+                    flush=True)
 
     return errors.avg, error_names
 

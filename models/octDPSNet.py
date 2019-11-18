@@ -87,7 +87,7 @@ class octDPSNet(nn.Module):
         self.device = None
         self.nlabel = nlabel
         self.mindepth = mindepth
-
+        self.grid_sample = partial(torch.nn.functional.grid_sample, padding_mode='zeros', align_corners=False)
         #         self.feature_extraction = feature_extraction()
         self.feature_extraction = oct_feature_extraction(last_type='normal')
         self.cost_regularization = costRegularization()
@@ -190,7 +190,7 @@ class octDPSNet(nn.Module):
                 homography = get_homography(depth, pose[:, j], intrinsics4, intrinsics_inv4)
                 # transform
                 pixel_coords = homography_transform(homography, current_pixel_coords, B, H, W)
-                targetimg_fea_t = torch.nn.functional.grid_sample(targetimg_fea_H, pixel_coords, padding_mode='zeros')
+                targetimg_fea_t = self.grid_sample(targetimg_fea_H, pixel_coords)
 
                 cost[:, :C_H, i - 1, :, :] = refimg_fea_H
                 cost[:, C_H:, i - 1, :, :] = targetimg_fea_t
@@ -207,7 +207,7 @@ class octDPSNet(nn.Module):
                 homography = get_homography(depth, pose[:, j], intrinsics8, intrinsics_inv8)
                 # transform
                 pixel_coords = homography_transform(homography, current_pixel_coords, B, H//2, W//2)
-                targetimg_fea_t = torch.nn.functional.grid_sample(targetimg_fea_L, pixel_coords, padding_mode='zeros')
+                targetimg_fea_t = self.grid_sample(targetimg_fea_L, pixel_coords)
 
                 cost_L[:, :C_L, i - 1, :, :] = refimg_fea_L
                 cost_L[:, C_L:, i - 1, :, :] = targetimg_fea_t

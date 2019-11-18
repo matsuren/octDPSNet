@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import cv2
 import torch
 from path import Path
 import datetime
@@ -34,29 +35,19 @@ def tensor2array(tensor, max_value=255, colormap='rainbow'):
         max_value = tensor.max()
     if tensor.ndimension() == 2 or tensor.size(0) == 1:
         try:
-            import cv2
-            if cv2.__version__.startswith('2'):  # 2.4
-                color_cvt = cv2.cv.CV_BGR2RGB
-            else:
-                color_cvt = cv2.COLOR_BGR2RGB
-            if colormap == 'rainbow':
-                colormap = cv2.COLORMAP_RAINBOW
-            elif colormap == 'bone':
-                colormap = cv2.COLORMAP_BONE
-            array = (tensor.squeeze().numpy() / max_value).clip(0, 1)
-            array = (array * 255).astype(np.uint8)
-            colored_array = cv2.applyColorMap(array, colormap)
-            array = cv2.cvtColor(colored_array, color_cvt).astype(np.float32) / 255
-            array = array.transpose(2, 0, 1)
-        except ImportError:
-            if tensor.ndimension() == 2:
-                tensor.unsqueeze_(2)
-            array = (tensor.expand(tensor.size(0), tensor.size(1), 3).numpy() / max_value).clip(0, 1)
-
+            cmap = getattr(cv2, 'COLORMAP_{}'.format(colormap.upper()))
+        except Exception as e:
+            print('No colormap:', colormap.upper())
+        array = (tensor.squeeze().numpy() / max_value).clip(0, 1)
+        array = (array * 255).clip(0, 255).astype(np.uint8)
+        colored_array = cv2.applyColorMap(array, cmap)
+        array = cv2.cvtColor(colored_array, cv2.COLOR_BGR2RGB).astype(np.float32) / 255
+        array = array.transpose(2, 0, 1)
     elif tensor.ndimension() == 3:
         # assert(tensor.size(0) == 3)
         array = 0.5 + tensor.numpy() * 0.5
     return array
+
 
 
 def save_checkpoint(save_path, one_state, epoch, filename='checkpoint.pth.tar'):
@@ -76,7 +67,6 @@ class AverageMeter(object):
 
     def reset(self, i):
         self.val = [0] * i
-        self.avg = [0] * i
         self.sum = [0] * i
         self.count = 0
 
@@ -88,7 +78,10 @@ class AverageMeter(object):
         for i, v in enumerate(val):
             self.val[i] = v
             self.sum[i] += v * n
-            self.avg[i] = self.sum[i] / self.count
+
+    @property
+    def avg(self):
+        return [it / self.count for it in self.sum]
 
     def __repr__(self):
         val = ' '.join(['{:.{}f}'.format(v, self.precision) for v in self.val])

@@ -2,11 +2,11 @@ from __future__ import division
 import torch
 import random
 import numpy as np
-from scipy.misc import imresize
 from scipy.ndimage.interpolation import zoom
 import warnings
 import imgaug as ia
 from imgaug import augmenters as iaa
+import cv2
 
 '''Set of tranform random routines that takes list of inputs as arguments,
 in order to have random but coherent transformations.'''
@@ -63,7 +63,7 @@ class RandomScaleCrop(object):
 
         output_intrinsics[0] *= x_scaling
         output_intrinsics[1] *= y_scaling
-        scaled_images = [imresize(im, (scaled_h, scaled_w)) for im in images]
+        scaled_images = [cv2.resize(im, (scaled_w, scaled_h)) for im in images]
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
