@@ -91,7 +91,7 @@ class ColorJitter(object):
                     loc=0,
                     scale=(0.0,
                            0.01 * 255)),  # add gaussian noise to images
-                iaa.ContrastNormalization(
+                iaa.LinearContrast(
                     (0.8, 1.2),
                     per_channel=0.25),  # improve or worsen the contrast
                 iaa.Multiply((0.8, 1.2), per_channel=0.25),
