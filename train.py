@@ -64,6 +64,7 @@ parser.add_argument('--mindepth', type=float, default=0.5, help='minimum depth')
 parser.add_argument('--alpha', type=float, default=0.9375,
                     help='ratio of low frequency')  # 0.9375, 0.875, 0.75, 0.5, 0.25
 # parser.add_argument('--reduction', type=int, default=8, help='reduction rate for oct SE')  # 8, 16
+parser.add_argument('--val-from', type=int, default=0, help='start validation from N epoch')
 
 n_iter = 0
 start_epoch = 0
@@ -176,15 +177,16 @@ def main():
     for epoch in range(start_epoch, args.epochs):
         # train for one epoch
         train_loss = train(args, train_loader, octdps, optimizer, args.epoch_size, training_writer, epoch)
-        errors, error_names = validate_with_gt(args, val_loader, octdps, epoch, output_writers)
+
+        if args.val_from <= epoch:
+            errors, error_names = validate_with_gt(args, val_loader, octdps, epoch, output_writers)
+            for error, name in zip(errors, error_names):
+                training_writer.add_scalar(name, error, epoch)
+            # Up to you to chose the most relevant error to measure your model's performance, careful some measures are to maximize (such as a1,a2,a3)
+            decisive_error = errors[0]
+        else:
+            decisive_error = -1
         scheduler.step()
-        error_string = ', '.join('{} : {:.3f}'.format(name, error) for name, error in zip(error_names, errors))
-
-        for error, name in zip(errors, error_names):
-            training_writer.add_scalar(name, error, epoch)
-
-        # Up to you to chose the most relevant error to measure your model's performance, careful some measures are to maximize (such as a1,a2,a3)
-        decisive_error = errors[0]
         save_checkpoint(
             args.save_path, {
                 'epoch': epoch + 1,
