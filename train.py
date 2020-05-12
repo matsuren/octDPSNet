@@ -1,4 +1,5 @@
 from models import octDPSNet as PSNet
+from models.octDPSNetOne import octDPSNetOne
 
 import argparse
 import time
@@ -28,8 +29,10 @@ parser.add_argument('data', metavar='DIR',
                     help='path to dataset')
 parser.add_argument('-j', '--workers', default=6, type=int, metavar='N',
                     help='number of data loading workers')
-parser.add_argument('--epochs', default=16, type=int, metavar='N',
+parser.add_argument('--epochs', default=20, type=int, metavar='N',
                     help='number of total epochs to run')
+# parser.add_argument('--epochs', default=16, type=int, metavar='N',
+#                     help='number of total epochs to run')
 parser.add_argument('--epoch-size', default=0, type=int, metavar='N',
                     help='manual epoch size (will match dataset size if not set)')
 parser.add_argument('-b', '--batch-size', default=16, type=int,
@@ -129,9 +132,13 @@ def main():
 
     # create model
     print("=> creating model")
-    octdps = PSNet(args.nlabel, args.mindepth).cuda()
+    if octconv.ALPHA == 1:
+        octdps = octDPSNetOne(args.nlabel, args.mindepth).cuda()
+    else:
+        octdps = PSNet(args.nlabel, args.mindepth).cuda()
     cudnn.benchmark = True
-    if False:
+    isAdam = True
+    if isAdam:
         print('=> setting adam solver')
         optimizer = torch.optim.Adam(octdps.parameters(), args.lr,
                                      betas=(args.momentum, args.beta),
@@ -142,7 +149,10 @@ def main():
                           weight_decay=args.weight_decay)
 
     print('=> setting scheduler')
-    scheduler = StepLR(optimizer, step_size=12, gamma=0.1)
+    if isAdam:
+        scheduler = StepLR(optimizer, step_size=15, gamma=0.5)
+    else:
+        scheduler = StepLR(optimizer, step_size=12, gamma=0.1)
 
     if args.pretrained:
         checkpoint = torch.load(args.pretrained)

@@ -15,6 +15,7 @@ from torch.utils import model_zoo
 
 from models.oct_semodule import SpatialSELayerOct
 
+from models.octDPSNetOne import octDPSNetOne
 
 def addHL(x1, x2):
     x1_H, x1_L = x1
@@ -294,7 +295,11 @@ def octdpsnet(nlabel, mindepth, alpha, pretrained=False):
             0.75: 'octdps_a75n32-911a7225.pth',
         }
 
-    model = octDPSNet(nlabel, mindepth)
+    if alpha == 1:
+        model = octDPSNetOne(nlabel, mindepth)
+    else:
+        model = octDPSNet(nlabel, mindepth)
+
     if pretrained:
         if alpha in a_to_url:
             url = 'http://www.robot.t.u-tokyo.ac.jp/~komatsu/data/{}'.format(a_to_url[alpha])
