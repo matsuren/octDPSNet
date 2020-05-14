@@ -191,20 +191,6 @@ def addHL(x1, x2):
     return x1 + x2
 
 
-def oct_convtext(in_planes, out_planes, kernel_size=3, stride=1, dilation=1, type='normal'):
-    if type == 'last':
-        return nn.Sequential(
-            OctConv(in_planes, out_planes, kernel_size=kernel_size, stride=stride, dilation=dilation,
-                    padding=((kernel_size - 1) * dilation) // 2, type=type),
-            nn.LeakyReLU(0.1, inplace=True)
-        )
-    else:
-        return nn.Sequential(
-            OctConv(in_planes, out_planes, kernel_size=kernel_size, stride=stride, dilation=dilation,
-                    padding=((kernel_size - 1) * dilation) // 2, type=type),
-            _LeakyReLU(0.1, inplace=True)
-        )
-
 
 def convbn_3d(in_planes, out_planes, kernel_size, stride, pad):
     return nn.Sequential(nn.Conv3d(in_planes, out_planes, kernel_size=kernel_size, padding=pad, stride=stride),
@@ -250,6 +236,60 @@ class costRegularization(nn.Module):
         return cost0
 
 
+
+class Conv_L(nn.Module):
+    def __init__(self):
+        super(Conv_L, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(1 + 32, 32, kernel_size=3, stride=1, dilation=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1, dilation=2, padding=2),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1, dilation=4, padding=4),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 16, kernel_size=3, stride=1, dilation=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(16, 1, kernel_size=3, stride=1, dilation=1, padding=1)
+        )
+        self.upsample = partial(F.interpolate, scale_factor=2, mode="nearest")
+        self.avg_pool = partial(F.avg_pool2d, kernel_size=2, stride=2)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        x = self.avg_pool(x)
+        x = self.conv(x)
+        x = self.upsample(x)
+        x = self.relu(x)
+        return x
+
+class Conv_H(nn.Module):
+    def __init__(self):
+        super(Conv_H, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(1 + 32, 32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1, dilation=2, padding=2),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1, dilation=4, padding=4),
+            nn.ReLU(inplace=True),
+            # OctConv(32, 32, kernel_size=3, stride=1, dilation=8, padding=8),
+            # nn.ReLU(inplace=True),
+            nn.Conv2d(32, 16, kernel_size=3, stride=1, dilation=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1)
+        )
+        self.upsample = partial(F.interpolate, scale_factor=2, mode="nearest")
+        self.avg_pool = partial(F.avg_pool2d, kernel_size=2, stride=2)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        x = self.avg_pool(x)
+        x = self.conv(x)
+        x = self.upsample(x)
+        x = self.relu(x)
+        return x
+
+
 class octDPSNetOne(nn.Module):
     def __init__(self, nlabel, mindepth):
         super(octDPSNetOne, self).__init__()
@@ -268,34 +308,10 @@ class octDPSNetOne(nn.Module):
 
         self.upsample = partial(F.interpolate, scale_factor=2, mode="trilinear", align_corners=False)
         # TODO Leakyrelu? Numver of parameter?
-        self.convs_L = nn.Sequential(
-            nn.Conv2d(1 + 32, 32, kernel_size=3, stride=1, dilation=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(32, 32, kernel_size=3, stride=1, dilation=2, padding=2),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(32, 32, kernel_size=3, stride=1, dilation=4, padding=4),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(32, 16, kernel_size=3, stride=1, dilation=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(16, 1, kernel_size=3, stride=1, dilation=1, padding=1),
-            nn.ReLU(inplace=True)
-        )
+        self.convs_L = Conv_L()
 
         # self.convs_H_first = OctConv(32, 32, kernel_size=3, stride=1, padding=1, type='last')
-        self.convs_H = nn.Sequential(
-            nn.Conv2d(1 + 32, 32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(32, 32, kernel_size=3, stride=1, dilation=2, padding=2),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(32, 32, kernel_size=3, stride=1, dilation=4, padding=4),
-            nn.ReLU(inplace=True),
-            # OctConv(32, 32, kernel_size=3, stride=1, dilation=8, padding=8),
-            # nn.ReLU(inplace=True),
-            nn.Conv2d(32, 16, kernel_size=3, stride=1, dilation=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True)
-        )
+        self.convs_H = Conv_H()
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
